@@ -1,5 +1,11 @@
 # Wijzigingen
 
+## 0.1.1 — 21 november 2026
+
+- Installatiepakketten voor Debian/Ubuntu, Fedora en Arch, inclusief startcommando, icoon en menu-item.
+- Downloadlink en installatie-instructies bovenaan de README.
+- Automatische builds, tests en installatiecontroles vóór publicatie.
+
 ## 0.1.0 — 21 november 2026
 
 - Eerste ontwikkelversie met twee gekoppelde panelen, snelle en grondige vergelijking en drie synchronisatierichtingen.

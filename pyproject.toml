@@ -1,10 +1,12 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "syncshallot"
-version = "0.1.0"
+version = "0.1.1"
+license = "GPL-3.0-or-later"
+license-files = ["LICENSE"]
 description = "De gemakkelijkste manier om je backup schijven te synchroniseren, zonder onnodige bestanden op je backups te laten staan!"
 readme = "README.md"
 requires-python = ">=3.11"

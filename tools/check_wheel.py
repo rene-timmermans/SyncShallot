@@ -5,9 +5,11 @@ import subprocess
 import sys
 import tempfile
 from zipfile import ZipFile
+import tomllib
 
 project = Path(__file__).resolve().parents[1]
-wheel = next((project / "dist").glob("syncshallot-*.whl"))
+version = tomllib.loads((project / "pyproject.toml").read_text())["project"]["version"]
+wheel = project / "dist" / f"syncshallot-{version}-py3-none-any.whl"
 with tempfile.TemporaryDirectory(prefix="syncshallot-wheel-") as temporary:
     target = Path(temporary)
     with ZipFile(wheel) as archive:

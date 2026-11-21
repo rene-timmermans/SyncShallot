@@ -1,0 +1,14 @@
+Package: syncshallot
+Version: @VERSION@-1
+Section: utils
+Priority: optional
+Architecture: all
+Maintainer: Rene Timmermans <352420374+rene-timmermans@users.noreply.github.com>
+Depends: python3 (>= 3.11), python3-pyside6.qtcore (>= 6.6), python3-pyside6.qtgui (>= 6.6), python3-pyside6.qtwidgets (>= 6.6), qt6-qpa-plugins
+Recommends: qt6-wayland, qt6-translations-l10n
+Homepage: https://github.com/rene-timmermans/SyncShallot
+Description: De gemakkelijkste manier om je backup schijven te synchroniseren
+ Vergelijk bron en back-up inclusief submappen, kopieer nieuwe en gewijzigde
+ bestanden en bekijk welke verouderde bestanden alleen op de back-up staan.
+ Kies zelf of je die laat staan, isoleert of verwijdert. De bron blijft
+ standaard beschermd. Voor lokale mappen en gemounte USB- en netwerkdrives.

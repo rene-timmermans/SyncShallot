@@ -8,7 +8,21 @@ Wanneer je bestanden op je hoofdschijf vervangt of verwijdert, blijven de oude v
 
 SyncShallot vergelijkt de bron en de back-up inclusief submappen. Het kopieert nieuwe of gewijzigde bestanden en laat duidelijk zien welke bestanden alleen nog op de back-up staan. Je kiest zelf of je die laat staan, in een aparte map isoleert of verwijdert. De bron blijft standaard beschermd. Of de gekozen mappen op een lokale schijf, USB-schijf of gemounte netwerkshare staan, maakt daarbij niet uit.
 
-De twee panelen tonen overeenkomstige bestanden naast elkaar, met een overzicht van verschillen en geplande acties. De vormgeving sluit aan op PixelPickle en SoundSausage; het bureaubladthema bepaalt de kleuren. Dit is de eerste ontwikkelversie, **0.1.0**.
+De twee panelen tonen overeenkomstige bestanden naast elkaar, met een overzicht van verschillen en geplande acties. De vormgeving sluit aan op PixelPickle en SoundSausage; het bureaubladthema bepaalt de kleuren. De huidige ontwikkelversie is **0.1.1**.
+
+## Downloaden en installeren
+
+**[Download SyncShallot bij Releases →](https://github.com/rene-timmermans/SyncShallot/releases)**
+
+Kies onder **Assets** het pakket voor jouw distributie. De pakketbeheerder installeert de benodigde onderdelen mee. Daarna staat SyncShallot in het toepassingenmenu, of start je het met `syncshallot`.
+
+| Distributie | Download voor 0.1.1 | Installeren vanuit de downloadmap |
+|---|---|---|
+| Debian 13 / Ubuntu 26.04 of nieuwer | [Debian/Ubuntu (.deb)](https://github.com/rene-timmermans/SyncShallot/releases/download/v0.1.1/syncshallot_0.1.1-1_all.deb) | `sudo apt install ./syncshallot_0.1.1-1_all.deb` |
+| Fedora | [Fedora (.rpm)](https://github.com/rene-timmermans/SyncShallot/releases/download/v0.1.1/syncshallot-0.1.1-1.noarch.rpm) | `sudo dnf install ./syncshallot-0.1.1-1.noarch.rpm` |
+| Arch Linux | [Arch (.pkg.tar.zst)](https://github.com/rene-timmermans/SyncShallot/releases/download/v0.1.1/syncshallot-0.1.1-1-any.pkg.tar.zst) | `sudo pacman -U ./syncshallot-0.1.1-1-any.pkg.tar.zst` |
+
+Op Ubuntu moet de **universe**-pakketbron ingeschakeld zijn. Ubuntu 24.04 en Debian 12 hebben niet de vereiste PySide6-pakketten. De pakketten bevatten Python-code zonder eigen native binaries; de installatiecontroles lopen op x86-64. Dit is een prerelease die je via de bovenstaande Releases-link kunt vinden.
 
 ## Beginnen
 
@@ -26,7 +40,7 @@ python3 -m venv .venv
 .venv/bin/syncshallot
 ```
 
-De launcher gebruikt een aanwezige `.venv` automatisch. Een installeerbaar Python-wheel staat na het bouwen in `dist/`. Distributiepakketten en publicatie volgen afzonderlijk.
+De launcher gebruikt een aanwezige `.venv` automatisch. Bij Releases staan ook een Python-wheel en het bronarchief. Je hoeft die niet te gebruiken als je een van de bovenstaande installatiepakketten kiest.
 
 ## Netwerkshare naar USB-back-up
 
@@ -67,8 +81,15 @@ Bestandsinhoud, relatieve paden, gewone lees-/schrijfrechten waar ondersteund en
 python3 -m unittest discover -s tests -v
 python3 tools/preview.py
 python3 tools/build_wheel.py
+QT_QPA_PLATFORM=offscreen python3 -m syncshallot --selftest
 ```
 
 De tests werken uitsluitend met tijdelijke bestanden; de preview gebruikt fictieve mediabestanden en schrijft `build/syncshallot-preview.png`. Er is nog geen praktijktest op een echte NAS of USB-schijf uitgevoerd.
+
+GitHub Actions bouwt op Debian, Fedora en Arch en draait daar de volledige tests. De gemaakte pakketten worden daarna in schone omgevingen op Debian, Fedora, Arch, Ubuntu 26.04 en Ubuntu Rolling geïnstalleerd. Publicatie volgt pas wanneer alle controles slagen. De gedeelde pakketinhoud wordt gemaakt met `packaging/stage.sh`; de concrete PKGBUILD bij de release bevat de SHA-256 van het bronarchief.
+
+## Licentie
+
+GNU GPL versie 3 of nieuwer, zoals PixelPickle en SoundSausage. Zie [LICENSE](LICENSE).
 
 De paneelindeling is geïnspireerd op [Double Commander](https://doublecmd.github.io/doc/en/syncdirs.html) en [Total Commander](https://www.ghisler.com/screenshots/en/08.html). Het nieuwe icoon is met de ingebouwde imagegen-tool gemaakt met PixelPickle en SoundSausage als stijlreferentie; de gebruikte prompt staat in `syncshallot/assets/icon-prompt.txt`.

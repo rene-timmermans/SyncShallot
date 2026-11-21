@@ -1,0 +1,16 @@
+pkgname=syncshallot
+pkgver=@VERSION@
+pkgrel=1
+pkgdesc='De gemakkelijkste manier om je backup schijven te synchroniseren, zonder onnodige bestanden op je backups te laten staan!'
+arch=('any')
+url='https://github.com/rene-timmermans/SyncShallot'
+license=('GPL-3.0-or-later')
+depends=('python>=3.11' 'pyside6>=6.6')
+optdepends=('qt6-wayland: Wayland desktop support' 'qt6-translations: standard Qt dialog translations')
+source=("syncshallot-${pkgver}.tar.gz")
+sha256sums=('@SOURCE_SHA256@')
+
+package() {
+    cd "${srcdir}/syncshallot-${pkgver}"
+    sh packaging/stage.sh "${pkgdir}"
+}

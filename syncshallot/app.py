@@ -693,6 +693,9 @@ def main():
     app.setOrganizationName("SyncShallot")
     app.setWindowIcon(QIcon(str(ICON)))
     install_style(app)
+    if "--selftest" in sys.argv[1:]:
+        from .selftest import run
+        return run(app)
     window = MainWindow()
     app.window = window
     window.show()

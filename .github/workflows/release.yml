@@ -1,0 +1,221 @@
+name: Installatiepakketten bouwen en publiceren
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - syncshallot/**
+      - packaging/**
+      - tests/**
+      - tools/**
+      - pyproject.toml
+      - LICENSE
+      - docs/releases/**
+      - .github/workflows/release.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: packages-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  QT_QPA_PLATFORM: offscreen
+  PYTHONDONTWRITEBYTECODE: '1'
+
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.source.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 -m pip install 'setuptools>=77' wheel
+      - id: source
+        name: Bronarchief, wheel en PKGBUILD
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib
+          import os
+          import subprocess
+          import tomllib
+          from syncshallot import __version__
+          assert tomllib.loads(Path('pyproject.toml').read_text())['project']['version'] == __version__
+          assert Path(f'docs/releases/{__version__}.md').is_file()
+          Path('dist').mkdir(exist_ok=True)
+          archive = Path(f'dist/syncshallot-{__version__}.tar.gz')
+          subprocess.run(['git', 'archive', '--format=tar.gz', f'--prefix=syncshallot-{__version__}/', f'--output={archive}', 'HEAD'], check=True)
+          checksum = hashlib.sha256(archive.read_bytes()).hexdigest()
+          template = Path('packaging/PKGBUILD.in').read_text()
+          Path('dist/PKGBUILD').write_text(template.replace('@VERSION@', __version__).replace('@SOURCE_SHA256@', checksum))
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write(f'version={__version__}\n')
+          PY
+          python3 tools/build_wheel.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: source
+          path: dist/*
+          if-no-files-found: error
+
+  debian:
+    needs: source
+    runs-on: ubuntu-latest
+    container: debian:trixie
+    timeout-minutes: 20
+    steps:
+      - name: Bouw- en testonderdelen
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends python3 python3-pyside6.qtcore python3-pyside6.qtgui python3-pyside6.qtwidgets python3-pyside6.qttest qt6-qpa-plugins fonts-dejavu-core
+      - uses: actions/download-artifact@v4
+        with: { name: source }
+      - name: Testen en .deb bouwen
+        env:
+          VERSION: ${{ needs.source.outputs.version }}
+        run: |
+          tar xzf "syncshallot-$VERSION.tar.gz"
+          cd "syncshallot-$VERSION"
+          python3 -m unittest discover -s tests -v
+          sh packaging/stage.sh ../root
+          mkdir -p ../root/DEBIAN
+          sed "s/@VERSION@/$VERSION/g" packaging/debian/control.in > ../root/DEBIAN/control
+          echo "Installed-Size: $(du -sk ../root/usr | cut -f1)" >> ../root/DEBIAN/control
+          cd ..
+          dpkg-deb --root-owner-group --build root "syncshallot_${VERSION}-1_all.deb"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: debian
+          path: syncshallot_*_all.deb
+          if-no-files-found: error
+
+  fedora:
+    needs: source
+    runs-on: ubuntu-latest
+    container: fedora:latest
+    timeout-minutes: 20
+    steps:
+      - run: dnf install -y rpm-build python3 python3-pyside6 dejavu-sans-fonts
+      - uses: actions/download-artifact@v4
+        with: { name: source }
+      - name: Testen en .rpm bouwen
+        env:
+          VERSION: ${{ needs.source.outputs.version }}
+        run: |
+          tar xzf "syncshallot-$VERSION.tar.gz"
+          cd "syncshallot-$VERSION"
+          python3 -m unittest discover -s tests -v
+          cd ..
+          mkdir -p /tmp/rpmbuild/SOURCES
+          cp "syncshallot-$VERSION.tar.gz" /tmp/rpmbuild/SOURCES/
+          rpmbuild -bb --define '_topdir /tmp/rpmbuild' --define 'dist %{nil}' --define "ss_version $VERSION" "syncshallot-$VERSION/packaging/fedora/syncshallot.spec"
+          cp /tmp/rpmbuild/RPMS/noarch/syncshallot-*.rpm .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fedora
+          path: syncshallot-*.rpm
+          if-no-files-found: error
+
+  arch:
+    needs: source
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    timeout-minutes: 20
+    steps:
+      - run: pacman -Syu --noconfirm --needed base-devel pyside6 ttf-dejavu
+      - uses: actions/download-artifact@v4
+        with: { name: source }
+      - name: Testen en Arch-pakket bouwen
+        env:
+          VERSION: ${{ needs.source.outputs.version }}
+        run: |
+          tar xzf "syncshallot-$VERSION.tar.gz"
+          cd "syncshallot-$VERSION"
+          python3 -m unittest discover -s tests -v
+          cd ..
+          useradd -m builder
+          mkdir -p /home/builder/pkg
+          cp "syncshallot-$VERSION.tar.gz" PKGBUILD /home/builder/pkg/
+          chown -R builder /home/builder/pkg
+          su builder -c 'cd /home/builder/pkg && makepkg --noconfirm'
+          cp /home/builder/pkg/syncshallot-*.pkg.tar.zst .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: arch
+          path: syncshallot-*.pkg.tar.zst
+          if-no-files-found: error
+
+  installed:
+    needs: [debian, fedora, arch]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { image: 'debian:trixie', family: debian, artifact: debian }
+          - { image: 'ubuntu:26.04', family: debian, artifact: debian }
+          - { image: 'ubuntu:rolling', family: debian, artifact: debian }
+          - { image: 'fedora:latest', family: fedora, artifact: fedora }
+          - { image: 'archlinux:latest', family: arch, artifact: arch }
+    container: ${{ matrix.image }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: packages
+      - name: Installeren met alleen pakketafhankelijkheden
+        env:
+          FAMILY: ${{ matrix.family }}
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          case "$FAMILY" in
+            debian)
+              apt-get update
+              apt-get install -y ./packages/syncshallot_*_all.deb
+              ;;
+            fedora)
+              dnf install -y ./packages/syncshallot-*.rpm
+              ;;
+            arch)
+              pacman -Syu --noconfirm
+              pacman -U --noconfirm ./packages/syncshallot-*.pkg.tar.zst
+              ;;
+          esac
+      - name: Geïnstalleerde app en synchronisatie testen
+        run: |
+          test -s /usr/share/applications/syncshallot.desktop
+          test -s /usr/share/icons/hicolor/256x256/apps/syncshallot.png
+          test -s /usr/share/licenses/syncshallot/LICENSE
+          cd /tmp
+          syncshallot --selftest
+
+  publish:
+    needs: [source, installed]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: downloads
+          merge-multiple: true
+      - name: Downloads als prerelease publiceren
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.source.outputs.version }}
+        run: |
+          cd downloads
+          sha256sum * > SHA256SUMS
+          cd ..
+          tag="v$VERSION"
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo 'Deze release bestaat al; bestaande tags en downloads worden niet overschreven.' >&2
+            exit 1
+          fi
+          gh release create "$tag" downloads/* --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "SyncShallot $VERSION — installatiepakketten" --notes-file "docs/releases/$VERSION.md" --prerelease --draft
+          gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --draft=false
