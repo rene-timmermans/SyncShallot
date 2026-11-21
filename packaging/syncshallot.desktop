@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=SyncShallot
+Comment=Compare directories and synchronize deliberately
+Comment[nl]=De gemakkelijkste manier om je backup schijven te synchroniseren, zonder onnodige bestanden op je backups te laten staan!
+Exec=syncshallot
+Icon=syncshallot
+Terminal=false
+Categories=Utility;FileTools;
+Keywords=sync;backup;compare;directories;

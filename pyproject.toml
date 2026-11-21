@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "syncshallot"
+version = "0.1.0"
+description = "De gemakkelijkste manier om je backup schijven te synchroniseren, zonder onnodige bestanden op je backups te laten staan!"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = ["PySide6>=6.6,<7"]
+
+[project.scripts]
+syncshallot = "syncshallot.app:main"
+
+[tool.setuptools.package-data]
+syncshallot = ["assets/*"]
+
+[tool.setuptools.packages.find]
+include = ["syncshallot*"]
