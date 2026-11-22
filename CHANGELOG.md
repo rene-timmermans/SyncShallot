@@ -1,5 +1,10 @@
 # Wijzigingen
 
+## 1.1.0 — 22 november 2026
+
+- Aparte functie voor het vinden en opruimen van identieke bestanden binnen één map met submappen, met een beschermd bewaard exemplaar per groep.
+- Herstelmapproblemen krijgen een gerichte melding met het ingestelde pad en een knop om die locatie te wijzigen; de locatie wordt vooraf gecontroleerd.
+
 ## 1.0.0 — 22 november 2026
 
 - Eerste stabiele release met beschermde bron, drie synchronisatierichtingen en installatiepakketten voor Debian/Ubuntu, Fedora en Arch.

@@ -6,8 +6,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 import time
-from PySide6.QtCore import QSettings, Qt, QItemSelectionModel, QPoint
-from PySide6.QtWidgets import QApplication
+from PySide6.QtCore import QSettings, Qt, QItemSelectionModel, QPoint, QTimer
+from PySide6.QtWidgets import QApplication, QMessageBox
 from PySide6.QtTest import QTest
 from syncshallot.app import MainWindow, Review, Worker, install_style
 from syncshallot.i18n import LANGUAGES, TEXT, Translator
@@ -187,6 +187,53 @@ class InterfaceTests(unittest.TestCase):
         worker.last_progress = time.monotonic()
         worker.report(1355, 1355, "last")
         self.assertEqual(updates, [(1355, 1355, "last")])
+        worker.deleteLater()
+
+    def test_recovery_error_identifies_full_path_and_how_to_change_it(self):
+        self.window.compared(self.plan())
+        location = '/run/media/deck/old-drive/Geïsoleerd'
+        error = engine.RecoveryFolderError(location, 'Permission denied')
+        dialogs = []
+        def capture(dialog):
+            dialogs.append(dialog)
+            return QMessageBox.StandardButton.Ok
+        with patch.object(QMessageBox, 'exec', capture):
+            self.window.failed(error)
+        dialog = dialogs[0]
+        self.assertEqual(dialog.text(), self.window.tr('recovery_error'))
+        self.assertIn(location, dialog.informativeText())
+        self.assertIn('Opties → Instellingen… → Herstel- en isolatiemap', dialog.informativeText())
+        self.assertIn('nog geen bestandsacties', dialog.informativeText())
+        self.assertNotIn('logboek staan', dialog.informativeText())
+        self.assertTrue(any(button.text() == 'Herstelmap wijzigen…' for button in dialog.buttons()))
+        self.assertIsNone(self.window.plan)
+
+    def test_change_recovery_button_opens_settings_at_recovery_field(self):
+        real_exec = QMessageBox.exec
+        def click_change(dialog):
+            button = next(b for b in dialog.buttons() if b.text() == self.window.tr('recovery_change'))
+            timeout = QTimer(dialog)
+            timeout.setSingleShot(True)
+            timeout.timeout.connect(dialog.reject)
+            timeout.start(1000)
+            QTimer.singleShot(0, button.click)
+            result = real_exec(dialog)
+            timeout.stop()
+            return result
+        with patch.object(QMessageBox, 'exec', click_change), patch.object(self.window, 'open_options') as settings:
+            self.window.failed(engine.RecoveryFolderError('/old-drive/recovery', 'Permission denied'))
+            self.app.processEvents()
+            settings.assert_called_once_with(focus_recovery=True)
+
+    def test_worker_preserves_recovery_error_context(self):
+        error = engine.RecoveryFolderError('/old-drive/recovery', 'Permission denied')
+        def fail(*_):
+            raise error
+        worker = Worker(fail)
+        errors = []
+        worker.failed.connect(errors.append)
+        worker.run()
+        self.assertEqual(errors, [error])
         worker.deleteLater()
 
     def test_settings_and_language_are_in_options_menu_not_above_results(self):

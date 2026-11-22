@@ -80,8 +80,36 @@ with tempfile.TemporaryDirectory(prefix='syncshallot-preview-') as temporary:
         window.manual()
         capture = window.manual_window
         app.processEvents()
+    duplicate_dialog = None
+    if '--duplicates' in sys.argv:
+        from syncshallot.duplicates_ui import DuplicateDialog
+        from syncshallot import duplicates
+        photos = base / 'Fotos'
+        examples = [
+            ('Albums/Vakantie/IMG_2048.jpg', b'holiday-photo' * 65536),
+            ('Import/foto-001.jpg', b'holiday-photo' * 65536),
+            ('Albums/Familie/verjaardag.jpg', b'birthday-photo' * 32768),
+            ('Archief/feestfoto.jpg', b'birthday-photo' * 32768),
+            ('Albums/Rondreis/zonsondergang.png', b'sunset-photo' * 131072),
+            ('Downloads/mijnfoto.png', b'sunset-photo' * 131072),
+            ('Backups/extra-kopie.png', b'sunset-photo' * 131072),
+            ('Favorieten/uniek.png', b'unique-photo' * 8192),
+        ]
+        for name, data in examples:
+            path = photos / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(data)
+        duplicate_dialog = DuplicateDialog(window, window.tr, settings)
+        duplicate_dialog.root.setText(str(photos))
+        duplicate_dialog.recovery.setText(str(base / 'Herstel-en-isolatie'))
+        duplicate_dialog.scanned(duplicates.find(photos))
+        duplicate_dialog.show()
+        app.processEvents()
+        capture = duplicate_dialog
     folder = Path(__file__).resolve().parents[1] / 'build'
     folder.mkdir(exist_ok=True)
-    suffix = ''.join('-' + key for key in ('dark', 'progress', 'settings', 'about', 'manual') if '--' + key in sys.argv)
+    suffix = ''.join('-' + key for key in ('dark', 'progress', 'settings', 'about', 'manual', 'duplicates') if '--' + key in sys.argv)
     capture.grab().save(str(folder / f'syncshallot-preview{suffix}.png'))
+    if duplicate_dialog is not None:
+        duplicate_dialog.reject()
     window.close()

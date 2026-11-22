@@ -16,12 +16,21 @@ from pathlib import Path
 import stat
 import shutil
 import threading
+import tempfile
 import time
 import uuid
 
 
 class SafetyError(RuntimeError):
     pass
+
+
+class RecoveryFolderError(SafetyError):
+    """Recovery storage failed before any synchronization action was started."""
+    def __init__(self, path, detail):
+        self.path = str(path)
+        self.detail = str(detail)
+        super().__init__(f"Recovery folder: {self.path}\n{self.detail}")
 
 
 class Cancelled(SafetyError):
@@ -376,31 +385,66 @@ def _copy(root, destination, rel, source, target, archive, cancel, progress=None
                 os.unlink(temp, dir_fd=dst_parent)
 
 
-class Archive:
-    """Private, unique run directory outside both selected roots; JSONL recovery log."""
-    def __init__(self, base, plan):
+def validate_recovery_folder(base, plan):
+    """Check the configured recovery location, including a real, disposable write probe."""
+    _root_identity(plan)
+    return validate_recovery_storage(base, (plan.left, plan.right), plan.roots, plan.entries)
+
+
+def validate_recovery_storage(base, roots, signatures, snapshots):
+    """Shared recovery-path safeguards for synchronization and single-folder deduplication."""
+    requested = str(base)
+    try:
         if not str(base).strip():
             raise SafetyError("Choose a recovery folder outside both directories")
         base = Path(base).expanduser().absolute()
+        requested = str(base)
         resolved = base.resolve()
-        for root in (plan.left, plan.right):
+        for root in roots:
             if resolved == root or root in resolved.parents or resolved in root.parents:
                 raise SafetyError("Recovery folder must be outside both selected directories")
         # Refuse symlink ancestors, including the base itself.
         for part in (base, *base.parents):
             if part.is_symlink():
                 raise SafetyError("Recovery folder must not use symbolic links")
-        base.mkdir(parents=True, exist_ok=True, mode=0o700)
         # Detect a base mounted inside one of the selected directory trees by alias.
-        protected = {s[:2] for s in plan.roots}
-        protected |= {e.sig[:2] for entries in plan.entries for e in entries.values() if e.kind == "dir"}
-        if any((p.stat().st_dev, p.stat().st_ino) in protected for p in (base, *base.parents)):
-            raise SafetyError("Recovery folder overlaps a selected directory through a mount")
+        protected = {s[:2] for s in signatures}
+        protected |= {e.sig[:2] for entries in snapshots for e in entries.values() if e.kind == "dir"}
+        for parent in (base, *base.parents):
+            try:
+                info = parent.stat()
+            except FileNotFoundError:
+                continue
+            if (info.st_dev, info.st_ino) in protected:
+                raise SafetyError("Recovery folder overlaps a selected directory through a mount")
+        base.mkdir(parents=True, exist_ok=True, mode=0o700)
+        with tempfile.TemporaryFile(dir=base, prefix=".syncshallot-check-") as probe:
+            probe.write(b"SyncShallot recovery storage check")
+            probe.flush()
+            os.fsync(probe.fileno())
+        return base
+    except (OSError, SafetyError) as error:
+        raise RecoveryFolderError(requested, error) from error
+
+
+class Archive:
+    """Private, unique run directory outside both selected roots; JSONL recovery log."""
+    def __init__(self, base, plan):
+        base = validate_recovery_folder(base, plan)
         self.path = base / plan.run_id
-        self.path.mkdir(mode=0o700)
         self.plan = plan
-        self.log = open(self.path / "journal.jsonl", "x", encoding="utf-8")
-        self.record(event="start", left=str(plan.left), right=str(plan.right), mode=plan.mode)
+        self.log = None
+        try:
+            self.path.mkdir(mode=0o700)
+            self.log = open(self.path / "journal.jsonl", "x", encoding="utf-8")
+            self.record(event="start", left=str(plan.left), right=str(plan.right), mode=plan.mode)
+        except OSError as error:
+            if self.log is not None:
+                try:
+                    self.log.close()
+                except OSError:
+                    pass
+            raise RecoveryFolderError(base, error) from error
 
     def record(self, **values):
         self.log.write(json.dumps(values, ensure_ascii=True) + "\n")
@@ -464,6 +508,8 @@ def execute(plan, recovery_base, cancel=None, progress=None, allow_permanent_del
         raise SafetyError("No actions selected")
     if progress:
         progress(0, len(selected), FileProgress("check", ""))
+    checkpoint(cancel)
+    validate_recovery_folder(recovery_base, plan)
     revalidate(plan, cancel)
     # Create directories first, files next, removals deepest first.
     copies = [r for r in selected if r.action.startswith("copy_")]

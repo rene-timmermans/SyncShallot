@@ -123,7 +123,7 @@ class PlanFilter(QSortFilterProxyModel):
 
 class Worker(QThread):
     result = Signal(object)
-    failed = Signal(str)
+    failed = Signal(object)
     progress = Signal(object)
 
     def __init__(self, function, parent=None):
@@ -143,7 +143,7 @@ class Worker(QThread):
         try:
             self.result.emit(self.function(self.cancel, self.report))
         except Exception as error:
-            self.failed.emit(str(error))
+            self.failed.emit(error)
 
 
 class Review(QDialog):
@@ -247,6 +247,9 @@ class MainWindow(QMainWindow):
         header.addWidget(mascot)
         brand = QLabel("<b style='font-size:22px'>SyncShallot</b><br>" + self.tr("tagline"))
         header.addWidget(brand, 1)
+        self.duplicates_button = QPushButton(self.tr('dup_open'))
+        self.duplicates_button.clicked.connect(self.open_duplicates)
+        header.addWidget(self.duplicates_button)
         outer.addLayout(header)
 
         self.config = QWidget()
@@ -417,6 +420,10 @@ class MainWindow(QMainWindow):
         outer.addWidget(self.log)
         file_menu = self.menuBar().addMenu(self.tr("file"))
         self.file_actions = []
+        self.duplicates_action = file_menu.addAction(self.tr('dup_open'))
+        self.duplicates_action.triggered.connect(self.open_duplicates)
+        self.file_actions.append(self.duplicates_action)
+        file_menu.addSeparator()
         for key, callback in (("save_profile", self.save_profile), ("load_profile", self.load_profile), ("export", self.export), ("open_recovery", self.open_recovery)):
             action = QAction(self.tr(key), self)
             action.triggered.connect(callback)
@@ -458,7 +465,28 @@ class MainWindow(QMainWindow):
         if path:
             field.setText(path)
 
-    def open_options(self):
+    def open_duplicates(self):
+        if self.worker is not None:
+            return
+        from .duplicates_ui import DuplicateDialog
+        dialog = DuplicateDialog(self, self.tr, self.settings)
+        dialog.changed.connect(self.duplicates_changed)
+        dialog.exec()
+        dialog.deleteLater()
+
+    def duplicates_changed(self, root):
+        if self.plan is None:
+            return
+        root = Path(root)
+        if any(root == path or root in path.parents or path in root.parents for path in (self.plan.left, self.plan.right)):
+            self.invalidate()
+
+    def open_options(self, focus_recovery=False):
+        if focus_recovery:
+            def focus():
+                self.recovery.setFocus()
+                self.recovery.selectAll()
+            QTimer.singleShot(0, focus)
         self.options_dialog.exec()
         self.save_settings()
 
@@ -530,6 +558,7 @@ class MainWindow(QMainWindow):
         self.update_summary()
 
     def set_busy(self, busy):
+        self.duplicates_button.setEnabled(not busy)
         for widget in (self.config, self.action_bar, self.batch_bar):
             widget.setEnabled(not busy)
         self.options_menu.setEnabled(not busy)
@@ -629,19 +658,34 @@ class MainWindow(QMainWindow):
         self.invalidate()
         self.pending_rescan = True
 
-    def failed(self, message):
+    def failed(self, error):
+        recovery_problem = isinstance(error, engine.RecoveryFolderError)
+        message = str(error)
         self.pending_rescan = False
         self.invalidate()
-        self.summary.setText(self.tr("error"))
+        title = self.tr("recovery_error") if recovery_problem else self.tr("error")
+        self.summary.setText(title)
+        self.statusBar().showMessage(title)
         self.log.show()
-        self.log.appendPlainText(message)
         box = QMessageBox(self)
         box.setIcon(QMessageBox.Icon.Warning)
         box.setWindowTitle("SyncShallot")
-        box.setText(self.tr("error"))
-        box.setInformativeText(self.tr("error_help") + "\n\n" + message)
+        box.setText(title)
+        change_folder = None
+        if recovery_problem:
+            information = self.tr("recovery_error_help", path=error.path or self.tr("recovery_not_set"))
+            self.log.appendPlainText(title + "\n" + information)
+            box.setInformativeText(information)
+            box.setDetailedText(error.detail)
+            change_folder = box.addButton(self.tr("recovery_change"), QMessageBox.ButtonRole.AcceptRole)
+            box.addButton(QMessageBox.StandardButton.Ok)
+        else:
+            self.log.appendPlainText(message)
+            box.setInformativeText(self.tr("error_help") + "\n\n" + message)
         box.setTextFormat(Qt.TextFormat.PlainText)
         box.exec()
+        if change_folder is not None and box.clickedButton() is change_folder:
+            QTimer.singleShot(0, lambda: self.open_options(focus_recovery=True))
 
     def finished(self):
         self.set_busy(False)

@@ -7,6 +7,8 @@ from .app import MainWindow
 from .about import AboutDialog
 from .manual import ManualWindow, load_manual
 from .i18n import LANGUAGES
+from . import duplicates
+from .duplicates_ui import DuplicateDialog
 
 
 def run(app):
@@ -41,7 +43,7 @@ def run(app):
             raise RuntimeError("Selftest: icon or default protection failed")
         window.compared(engine.compare(source, target))
         for language in LANGUAGES:
-            if len(load_manual(language)['sections']) != 12:
+            if len(load_manual(language)['sections']) != 13:
                 raise RuntimeError("Selftest: offline manual is incomplete")
         manual = ManualWindow(window, window.tr)
         manual.search.setText('SHA-256')
@@ -54,9 +56,30 @@ def run(app):
         manual.deleteLater()
         about.close()
         about.deleteLater()
+        photos = base / 'photos'
+        (photos / 'album').mkdir(parents=True)
+        (photos / 'imports').mkdir()
+        (photos / 'album/original.jpg').write_bytes(b'identical photo')
+        (photos / 'imports/renamed.jpg').write_bytes(b'identical photo')
+        duplicate_plan = duplicates.find(photos)
+        if len(duplicate_plan.groups) != 1 or any(a != 'skip' for a in duplicate_plan.actions.values()):
+            raise RuntimeError('Selftest: duplicate groups or safe defaults failed')
+        duplicate_dialog = DuplicateDialog(window, window.tr, QSettings(str(base / 'duplicate-settings.ini'), QSettings.Format.IniFormat))
+        duplicate_dialog.root.setText(str(photos))
+        duplicate_dialog.scanned(duplicate_plan)
+        if duplicate_dialog.tree.topLevelItemCount() != 1:
+            raise RuntimeError('Selftest: duplicate interface failed')
+        duplicate_dialog.reject()
+        duplicate_dialog.deleteLater()
+        duplicate_plan.actions['imports/renamed.jpg'] = 'isolate'
+        duplicate_result = duplicates.execute(duplicate_plan, base / 'duplicate-recovery')
+        if not (photos / 'album/original.jpg').exists() or (photos / 'imports/renamed.jpg').exists():
+            raise RuntimeError('Selftest: duplicate cleanup failed')
+        if (Path(duplicate_result['recovery']) / 'isolated/imports/renamed.jpg').read_bytes() != b'identical photo':
+            raise RuntimeError('Selftest: duplicate recovery failed')
         app.processEvents()
         window.close()
         window.deleteLater()
         app.processEvents()
-    print(f"SyncShallot {__version__}: installed interface, source protection, synchronization, isolation, recovery and offline help OK")
+    print(f"SyncShallot {__version__}: installed interface, source protection, synchronization, isolation, recovery, duplicates and offline help OK")
     return 0

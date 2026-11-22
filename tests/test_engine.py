@@ -76,6 +76,58 @@ class EngineTests(unittest.TestCase):
         self.assertEqual((path / "overwritten/right/movie").read_bytes(), b"old")
         self.assertIn('"event": "finished"', (path / "journal.jsonl").read_text())
 
+    def test_unwritable_recovery_is_reported_before_recheck_or_file_actions(self):
+        self.put(self.left, "new")
+        self.put(self.right, "old")
+        plan = self.plan()
+        before = e.scan(self.left, True), e.scan(self.right, True)
+        denied = PermissionError(13, 'Permission denied', str(self.recovery))
+        with patch.object(e.tempfile, 'TemporaryFile', side_effect=denied), patch.object(e, 'revalidate') as recheck:
+            with self.assertRaises(e.RecoveryFolderError) as raised:
+                self.run_plan(plan)
+            recheck.assert_not_called()
+        self.assertEqual(raised.exception.path, str(self.recovery))
+        self.assertIn('Permission denied', raised.exception.detail)
+        self.assertEqual((e.scan(self.left, True), e.scan(self.right, True)), before)
+        self.assertFalse((self.recovery / plan.run_id).exists())
+
+    def test_inaccessible_recovery_parent_reports_configured_full_path(self):
+        self.put(self.left, 'new')
+        plan = self.plan()
+        location = self.base / 'disconnected-drive' / 'Geïsoleerd'
+        original = Path.resolve
+        def resolve(path, *args, **kwargs):
+            if path == location:
+                raise PermissionError(13, 'Permission denied', str(location.parent))
+            return original(path, *args, **kwargs)
+        with patch.object(Path, 'resolve', resolve):
+            with self.assertRaises(e.RecoveryFolderError) as raised:
+                e.execute(plan, location)
+        self.assertEqual(raised.exception.path, str(location))
+        self.assertFalse((self.right / 'new').exists())
+
+    def test_recovery_path_that_is_a_file_has_specific_folder_error(self):
+        self.put(self.left, 'new')
+        self.recovery.write_bytes(b'existing file')
+        with self.assertRaises(e.RecoveryFolderError):
+            self.run_plan(self.plan())
+        self.assertEqual(self.recovery.read_bytes(), b'existing file')
+        self.assertFalse((self.right / 'new').exists())
+
+    def test_recovery_probe_is_removed_and_actual_copy_still_works(self):
+        self.put(self.left, 'new')
+        result = self.run_plan(self.plan())
+        self.assertEqual((self.right / 'new').read_bytes(), b'hello')
+        self.assertEqual([p.name for p in self.recovery.iterdir()], [Path(result['recovery']).name])
+
+    def test_source_access_error_is_not_mislabelled_as_recovery_error(self):
+        self.put(self.left, 'new')
+        plan = self.plan()
+        with patch.object(e, '_root_identity', side_effect=PermissionError(13, 'Source denied', str(self.left))):
+            with self.assertRaises(PermissionError):
+                self.run_plan(plan)
+        self.assertFalse(self.recovery.exists())
+
     def test_read_only_source_and_empty_directories(self):
         path = self.put(self.left, "folder/file")
         (self.left / "empty").mkdir()
