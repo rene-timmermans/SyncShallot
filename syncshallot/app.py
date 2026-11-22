@@ -5,7 +5,6 @@ from collections import Counter
 from dataclasses import asdict
 from datetime import datetime
 import json
-import os
 from pathlib import Path
 import sys
 import threading
@@ -13,7 +12,7 @@ import time
 
 from PySide6.QtCore import (QAbstractTableModel, QModelIndex, QSettings,
                             QSortFilterProxyModel, Qt, QThread, QTimer, QUrl, Signal)
-from PySide6.QtGui import QAction, QColor, QDesktopServices, QIcon, QPixmap
+from PySide6.QtGui import QAction, QActionGroup, QColor, QDesktopServices, QIcon, QKeySequence, QPixmap
 from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComboBox,
     QDialog, QDialogButtonBox, QFileDialog, QFormLayout, QFrame, QGroupBox,
     QHBoxLayout, QHeaderView, QLabel, QLineEdit, QMainWindow, QMessageBox,
@@ -125,7 +124,7 @@ class PlanFilter(QSortFilterProxyModel):
 class Worker(QThread):
     result = Signal(object)
     failed = Signal(str)
-    progress = Signal(str)
+    progress = Signal(object)
 
     def __init__(self, function, parent=None):
         super().__init__(parent)
@@ -135,9 +134,10 @@ class Worker(QThread):
 
     def report(self, *args):
         now = time.monotonic()
-        if now - self.last_progress > .15:
+        completed, total, detail = args if len(args) == 3 else (None, None, args[0])
+        if now - self.last_progress > .15 or (total and completed == total):
             self.last_progress = now
-            self.progress.emit(" · ".join(map(str, args)))
+            self.progress.emit((completed, total, detail))
 
     def run(self):
         try:
@@ -180,7 +180,8 @@ class Review(QDialog):
             overwrite = bool(row.action.startswith("copy_") and dest and dest.kind == "file")
             for j, text in enumerate((row.path, tr(row.action), "✓" if overwrite else "—")):
                 table.setItem(i, j, QTableWidgetItem(text))
-        table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+        table.setColumnWidth(0, 550)
         table.resizeColumnToContents(1)
         table.resizeColumnToContents(2)
         layout.addWidget(table)
@@ -228,7 +229,9 @@ class MainWindow(QMainWindow):
         self.plan = None
         self.worker = None
         self.pending_rescan = False
+        self._columns_initialized = False
         self.last_recovery = ""
+        self.manual_window = None
         self.setWindowTitle("SyncShallot")
         self.setWindowIcon(QIcon(str(ICON)))
         self.resize(1440, 900)
@@ -244,11 +247,6 @@ class MainWindow(QMainWindow):
         header.addWidget(mascot)
         brand = QLabel("<b style='font-size:22px'>SyncShallot</b><br>" + self.tr("tagline"))
         header.addWidget(brand, 1)
-        self.language = QComboBox()
-        for code, name in LANGUAGES.items():
-            self.language.addItem(name, code)
-        self.language.setCurrentIndex(tuple(LANGUAGES).index(self.tr.language))
-        header.addWidget(self.language)
         outer.addLayout(header)
 
         self.config = QWidget()
@@ -284,19 +282,23 @@ class MainWindow(QMainWindow):
         self.method.setCurrentIndex(int(self.settings.value("quick", 0)))
         choices.addWidget(self.method, 2)
         options.addLayout(choices)
+        outer.addWidget(self.config)
+
+        self.options_dialog = QDialog(self)
+        self.options_dialog.setWindowTitle(self.tr("preferences"))
+        self.options_dialog.resize(820, 620)
+        preferences = QVBoxLayout(self.options_dialog)
         self.unlock = QCheckBox(self.tr("unlock"))
-        options.addWidget(self.unlock)
+        preferences.addWidget(self.unlock)
         self.direction_note = QLabel()
         self.direction_note.setWordWrap(True)
         self.direction_note.setFrameStyle(QFrame.Shape.StyledPanel)
         self.direction_note.setMargin(8)
-        options.addWidget(self.direction_note)
+        preferences.addWidget(self.direction_note)
         self.scan_note = QLabel(self.tr("scan_help"))
         self.scan_note.setWordWrap(True)
-        options.addWidget(self.scan_note)
+        preferences.addWidget(self.scan_note)
         self.advanced = QGroupBox(self.tr("advanced"))
-        self.advanced.setCheckable(True)
-        self.advanced.setChecked(False)
         adv_layout = QVBoxLayout(self.advanced)
         self.advanced_body = QWidget()
         form = QFormLayout(self.advanced_body)
@@ -319,10 +321,12 @@ class MainWindow(QMainWindow):
         exclude_help.setWordWrap(True)
         form.addRow(exclude_help)
         adv_layout.addWidget(self.advanced_body)
-        self.advanced_body.hide()
-        self.advanced.toggled.connect(self.advanced_body.setVisible)
-        options.addWidget(self.advanced)
-        outer.addWidget(self.config)
+        preferences.addWidget(self.advanced)
+        preferences.addStretch(1)
+        options_buttons = QDialogButtonBox()
+        options_buttons.addButton(self.tr("close"), QDialogButtonBox.ButtonRole.RejectRole)
+        options_buttons.rejected.connect(self.options_dialog.reject)
+        preferences.addWidget(options_buttons)
 
         self.action_bar = QWidget()
         actions = QHBoxLayout(self.action_bar)
@@ -358,13 +362,16 @@ class MainWindow(QMainWindow):
             view.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
             view.setAlternatingRowColors(True)
             view.setWordWrap(False)
+            view.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
             view.verticalHeader().setDefaultSectionSize(27)
             view.verticalHeader().hide()
             view.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
             visible = (0, 1, 2, 6) if side == 0 else (3, 4, 5, 7)
             for col in range(8):
                 view.setColumnHidden(col, col not in visible)
-            view.horizontalHeader().setSectionResizeMode(visible[0], QHeaderView.ResizeMode.Stretch)
+            view.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+            view.horizontalHeader().setMinimumSectionSize(48)
+            view.setColumnWidth(visible[0], 320)
             for col in visible[1:]:
                 view.setColumnWidth(col, 105 if col in (1, 4) else 150 if col in (2, 5) else 190)
             self.splitter.addWidget(view)
@@ -386,10 +393,17 @@ class MainWindow(QMainWindow):
         batch.addWidget(self.batch_apply)
         outer.addWidget(self.batch_bar)
         bottom = QHBoxLayout()
+        progress_box = QVBoxLayout()
+        self.progress_label = QLabel()
+        self.progress_label.hide()
+        progress_box.addWidget(self.progress_label)
         self.progress = QProgressBar()
         self.progress.hide()
-        bottom.addWidget(self.progress, 1)
-        bottom.addStretch(1)
+        progress_box.addWidget(self.progress)
+        self.file_progress = QProgressBar()
+        self.file_progress.hide()
+        progress_box.addWidget(self.file_progress)
+        bottom.addLayout(progress_box, 1)
         self.stop_button = QPushButton(self.tr("stop"))
         self.stop_button.setEnabled(False)
         self.stop_button.clicked.connect(self.stop)
@@ -408,18 +422,34 @@ class MainWindow(QMainWindow):
             action.triggered.connect(callback)
             file_menu.addAction(action)
             self.file_actions.append(action)
+        self.options_menu = self.menuBar().addMenu(self.tr("options"))
+        self.settings_action = self.options_menu.addAction(self.tr("preferences"))
+        self.settings_action.triggered.connect(self.open_options)
+        self.language_menu = self.options_menu.addMenu(self.tr("language"))
+        self.language_group = QActionGroup(self)
+        self.language_group.setExclusive(True)
+        self.language_actions = {}
+        for code, name in LANGUAGES.items():
+            action = QAction(name, self)
+            action.setCheckable(True)
+            action.setData(code)
+            action.setChecked(code == self.tr.language)
+            self.language_group.addAction(action)
+            self.language_menu.addAction(action)
+            self.language_actions[code] = action
+        self.language_group.triggered.connect(lambda action: self.change_language(action.data()))
         help_menu = self.menuBar().addMenu(self.tr("help"))
-        manual = help_menu.addAction(self.tr("manual"))
-        manual.triggered.connect(self.manual)
-        about = help_menu.addAction(self.tr("about"))
-        about.triggered.connect(lambda: QMessageBox.about(self, "SyncShallot", f"SyncShallot {__version__}\n" + self.tr("tagline")))
+        self.manual_action = help_menu.addAction(self.tr("manual"))
+        self.manual_action.setShortcut(QKeySequence("F1"))
+        self.manual_action.triggered.connect(self.manual)
+        self.about_action = help_menu.addAction(self.tr("about"))
+        self.about_action.triggered.connect(self.about)
         for field in (self.left, self.right):
             field.textChanged.connect(self.invalidate)
         self.excludes.textChanged.connect(self.invalidate)
         self.mode.currentIndexChanged.connect(self.mode_changed)
         self.method.currentIndexChanged.connect(self.invalidate)
         self.unlock.toggled.connect(self.unlock_changed)
-        self.language.currentIndexChanged.connect(self.change_language)
         self.mode_changed()
         self.statusBar().showMessage(self.tr("ready"))
 
@@ -427,6 +457,10 @@ class MainWindow(QMainWindow):
         path = QFileDialog.getExistingDirectory(self, self.tr("browse"), field.text() or str(Path.home()))
         if path:
             field.setText(path)
+
+    def open_options(self):
+        self.options_dialog.exec()
+        self.save_settings()
 
     def invalidate(self, *_):
         if self.plan:
@@ -496,23 +530,53 @@ class MainWindow(QMainWindow):
         self.update_summary()
 
     def set_busy(self, busy):
-        for widget in (self.config, self.action_bar, self.batch_bar, self.language, self.splitter):
+        for widget in (self.config, self.action_bar, self.batch_bar):
             widget.setEnabled(not busy)
+        self.options_menu.setEnabled(not busy)
         for action in self.file_actions:
             action.setEnabled(not busy)
         self.stop_button.setEnabled(busy)
         self.progress.setVisible(busy)
-        self.progress.setRange(0, 0 if busy else 100)
+        self.progress_label.setVisible(busy)
+        self.file_progress.hide()
+        if busy:
+            self.progress.setRange(0, 0)
+            self.progress_label.setText(self.tr("scan_progress"))
         self.review_button.setEnabled(not busy and self.plan is not None)
 
-    def launch(self, function, callback):
+    def launch(self, function, callback, execution_total=None):
         self.set_busy(True)
+        if execution_total is not None:
+            self.show_progress((0, execution_total, engine.FileProgress("check", "")))
         self.worker = Worker(function, self)
         self.worker.result.connect(callback)
         self.worker.failed.connect(self.failed)
-        self.worker.progress.connect(self.statusBar().showMessage)
+        self.worker.progress.connect(self.show_progress)
         self.worker.finished.connect(self.finished)
         self.worker.start()
+
+    def show_progress(self, update):
+        completed, total, detail = update
+        if total is not None and total > 0:
+            self.progress.setRange(0, total)
+            self.progress.setValue(completed)
+            self.progress.setFormat(self.tr("action_progress", completed=completed, total=total) + " · %p%")
+            self.progress_label.hide()
+        if isinstance(detail, engine.FileProgress):
+            phase = self.tr("phase_" + detail.phase)
+            message = phase + (" · " + detail.path if detail.path else "")
+            if detail.total > 0:
+                self.file_progress.setRange(0, 1000)
+                self.file_progress.setValue(min(1000, detail.processed * 1000 // detail.total))
+                self.file_progress.setFormat(phase + " · " + self.tr("byte_progress",
+                    done=f"{detail.processed / (1024 * 1024):.1f}", total=f"{detail.total / (1024 * 1024):.1f}") + " · %p%")
+                self.file_progress.show()
+            else:
+                self.file_progress.hide()
+            self.statusBar().showMessage(message)
+        else:
+            self.file_progress.hide()
+            self.statusBar().showMessage(str(detail))
 
     def start_compare(self):
         if self.worker and self.worker.isRunning():
@@ -555,7 +619,8 @@ class MainWindow(QMainWindow):
         self.save_settings()
         allow_left = self.unlock.isChecked()
         self.launch(lambda cancel, progress: engine.execute(plan, recovery, cancel, progress,
-            allow_permanent_delete=any(r.action == "delete" for r in plan.rows), allow_left_changes=allow_left), self.executed)
+            allow_permanent_delete=any(r.action == "delete" for r in plan.rows), allow_left_changes=allow_left),
+            self.executed, sum(r.action != "skip" for r in plan.rows))
 
     def executed(self, result):
         self.last_recovery = result["recovery"]
@@ -597,6 +662,9 @@ class MainWindow(QMainWindow):
                 "excludes": self.excludes.toPlainText(), "recovery": self.recovery.text()}
 
     def save_settings(self):
+        if self._columns_initialized:
+            for side, view in enumerate(self.views):
+                self.settings.setValue(f"columns/{side}", view.horizontalHeader().saveState())
         for key, value in self.profile().items():
             if key not in ("mode", "schema", "thorough"):
                 self.settings.setValue(key, value)
@@ -649,12 +717,22 @@ class MainWindow(QMainWindow):
             QDesktopServices.openUrl(QUrl.fromLocalFile(path))
 
     def manual(self):
-        QMessageBox.information(self, self.tr("manual"), "\n\n".join(self.tr(k) for k in
-            ("protected_left", "two_way_warning", "scan_help", "exclude_help", "recovery_help", "review_help")))
+        from .manual import ManualWindow
+        if self.manual_window is None:
+            self.manual_window = ManualWindow(self, self.tr)
+        self.manual_window.show()
+        self.manual_window.raise_()
+        self.manual_window.activateWindow()
 
-    def change_language(self):
+    def about(self):
+        from .about import AboutDialog
+        AboutDialog(self, self.tr).exec()
+
+    def change_language(self, language):
+        if language == self.tr.language:
+            return
         self.save_settings()
-        self.settings.setValue("language", self.language.currentData())
+        self.settings.setValue("language", language)
         new_window = MainWindow(self.settings)
         QApplication.instance().window = new_window
         new_window.show()
@@ -665,24 +743,47 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self, "SyncShallot", self.tr("busy_close"))
             event.ignore()
         else:
+            if self.manual_window is not None:
+                self.manual_window.close()
+                self.manual_window.deleteLater()
+                self.manual_window = None
             # Do not overwrite a just-selected language during window replacement.
             language = self.settings.value("language", self.tr.language)
             self.save_settings()
             self.settings.setValue("language", language)
             event.accept()
 
+    def showEvent(self, event):
+        super().showEvent(event)
+        if not self._columns_initialized:
+            for side, view in enumerate(self.views):
+                header = view.horizontalHeader()
+                saved = self.settings.value(f"columns/{side}")
+                if not saved or not header.restoreState(saved):
+                    view.setColumnWidth(0 if side == 0 else 3,
+                                        max(220, view.viewport().width() - 105 - 150 - 190 - 2))
+                # A restored layout must never lock the path column again.
+                header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+            self._columns_initialized = True
+
 
 def install_style(app):
     """Use the system palette for both light and dark desktops, with familiar compact controls."""
     app.setStyle("Fusion")
     app.setStyleSheet("""
-        QToolButton, QPushButton { padding: 5px 10px; border-radius: 4px; }
+        QPushButton { padding: 5px 10px; border-radius: 4px; min-height: 20px;
+            border: 1px solid palette(mid); background: palette(button); color: palette(button-text); }
+        QPushButton:hover:enabled { background: palette(midlight); border-color: palette(highlight); }
+        QPushButton:pressed:enabled { background: palette(mid); }
+        QPushButton:focus { border: 1px dashed palette(highlight); }
+        QPushButton:disabled { color: palette(disabled, button-text); border-color: palette(mid); }
+        QToolButton { padding: 5px 10px; }
         QGroupBox { font-weight: 600; margin-top: 9px; padding-top: 9px; }
         QGroupBox::title { subcontrol-origin: margin; left: 8px; }
         QLineEdit, QComboBox { padding: 4px; min-height: 22px; }
         QTableView { gridline-color: palette(mid); }
         QHeaderView::section { padding: 5px; }
-        QPushButton[primary="true"] { background: palette(highlight); color: palette(highlighted-text); }
+        QPushButton[primary="true"]:enabled { background: palette(highlight); color: palette(highlighted-text); }
         QSplitter::handle { background: palette(mid); width: 3px; }
     """)
 

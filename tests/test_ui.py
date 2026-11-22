@@ -6,10 +6,10 @@ import tempfile
 import unittest
 from unittest.mock import patch
 import time
-from PySide6.QtCore import QSettings, Qt, QItemSelectionModel
+from PySide6.QtCore import QSettings, Qt, QItemSelectionModel, QPoint
 from PySide6.QtWidgets import QApplication
 from PySide6.QtTest import QTest
-from syncshallot.app import MainWindow, Review, install_style
+from syncshallot.app import MainWindow, Review, Worker, install_style
 from syncshallot.i18n import LANGUAGES, TEXT, Translator
 from syncshallot import engine
 
@@ -64,6 +64,14 @@ class InterfaceTests(unittest.TestCase):
         self.window.mode.setCurrentIndex(2)
         self.window.unlock.setChecked(False)
         self.assertEqual(self.window.mode.currentData(), "left_to_right")
+
+    def test_stable_window_has_no_preview_label_even_with_old_environment(self):
+        with patch.dict(os.environ, {'SYNCSHALLOT_PREVIEW': '1'}):
+            window = MainWindow(self.settings)
+            self.assertEqual(window.windowTitle(), 'SyncShallot')
+            window.close()
+            window.deleteLater()
+        self.app.processEvents()
 
     def test_dual_panes_filter_and_selection_are_linked(self):
         plan = self.plan()
@@ -120,6 +128,105 @@ class InterfaceTests(unittest.TestCase):
         self.assertTrue(all(r.status == "same" for r in self.window.plan.rows))
         self.assertFalse((plan.right / "film-720p").exists())
         self.assertTrue((plan.right / "film-4k").exists())
+
+    def test_path_columns_can_be_dragged_even_while_busy(self):
+        self.window.show()
+        self.app.processEvents()
+        self.window.set_busy(True)
+        for side, column in ((0, 0), (1, 3)):
+            view = self.window.views[side]
+            header = view.horizontalHeader()
+            old = header.sectionSize(column)
+            boundary = header.sectionViewportPosition(column) + old - 1
+            start = QPoint(boundary, header.height() // 2)
+            end = start + QPoint(70, 0)
+            QTest.mousePress(header.viewport(), Qt.MouseButton.LeftButton, pos=start)
+            QTest.mouseMove(header.viewport(), end)
+            QTest.mouseRelease(header.viewport(), Qt.MouseButton.LeftButton, pos=end)
+            self.assertGreater(header.sectionSize(column), old + 40)
+
+    def test_column_widths_survive_restart(self):
+        self.window.show()
+        self.app.processEvents()
+        self.window.views[0].setColumnWidth(0, 473)
+        self.window.views[1].setColumnWidth(3, 527)
+        self.window.save_settings()
+        restored = MainWindow(self.settings)
+        restored.show()
+        self.app.processEvents()
+        self.assertEqual(restored.views[0].columnWidth(0), 473)
+        self.assertEqual(restored.views[1].columnWidth(3), 527)
+        restored.close()
+        restored.deleteLater()
+
+    def test_execution_progress_has_real_counts_and_large_file_percentage(self):
+        self.window.set_busy(True)
+        gigabyte = 1024 ** 3
+        detail = engine.FileProgress("isolate", "large.mkv", 3 * gigabyte, 12 * gigabyte)
+        self.window.show_progress((17, 40, detail))
+        self.assertEqual(self.window.progress.maximum(), 40)
+        self.assertEqual(self.window.progress.value(), 17)
+        self.assertIn("17 van 40", self.window.progress.format())
+        self.assertEqual(self.window.file_progress.value(), 250)
+        self.assertFalse(self.window.file_progress.isHidden())
+        self.window.show_progress((40, 40, "last.mkv"))
+        self.assertEqual(self.window.progress.value(), 40)
+        self.assertTrue(self.window.file_progress.isHidden())
+
+    def test_scan_has_no_invented_overall_percentage(self):
+        self.window.set_busy(True)
+        self.window.show_progress((None, None, engine.FileProgress("scan", "file", 25, 100)))
+        self.assertEqual(self.window.progress.maximum(), 0)
+        self.assertIn("totaal nog onbekend", self.window.progress_label.text())
+        self.assertEqual(self.window.file_progress.value(), 250)
+
+    def test_worker_preserves_numbers_and_always_reports_final_completion(self):
+        worker = Worker(lambda *_: None)
+        updates = []
+        worker.progress.connect(updates.append)
+        worker.last_progress = time.monotonic()
+        worker.report(1355, 1355, "last")
+        self.assertEqual(updates, [(1355, 1355, "last")])
+        worker.deleteLater()
+
+    def test_settings_and_language_are_in_options_menu_not_above_results(self):
+        self.window.show()
+        self.app.processEvents()
+        self.assertTrue(self.window.options_dialog.isAncestorOf(self.window.unlock))
+        self.assertTrue(self.window.options_dialog.isAncestorOf(self.window.recovery))
+        self.assertTrue(self.window.options_dialog.isAncestorOf(self.window.excludes))
+        self.assertFalse(self.window.unlock.isVisible())
+        self.assertFalse(self.window.scan_note.isVisible())
+        self.assertIn(self.window.settings_action, self.window.options_menu.actions())
+        self.assertIn(self.window.language_menu.menuAction(), self.window.options_menu.actions())
+        self.assertEqual(set(self.window.language_actions), set(LANGUAGES))
+        self.window.set_busy(True)
+        self.assertFalse(self.window.options_menu.isEnabled())
+        self.window.set_busy(False)
+        self.assertTrue(self.window.options_menu.isEnabled())
+
+    def test_language_menu_changes_language_and_keeps_protection_default(self):
+        self.window.language_actions['en'].trigger()
+        replacement = self.app.window
+        self.assertEqual(replacement.tr.language, 'en')
+        self.assertFalse(replacement.unlock.isChecked())
+        self.assertEqual(replacement.mode.currentData(), 'left_to_right')
+        replacement.close()
+        replacement.deleteLater()
+        self.app.window = None
+
+    def test_help_menu_f1_opens_reusable_nonmodal_manual_during_task(self):
+        self.assertEqual(self.window.manual_action.shortcut().toString(), 'F1')
+        self.window.set_busy(True)
+        self.window.manual_action.trigger()
+        manual = self.window.manual_window
+        self.assertIsNotNone(manual)
+        self.assertFalse(manual.isModal())
+        self.assertTrue(manual.isVisible())
+        manual.close()
+        self.window.manual_action.trigger()
+        self.assertIs(self.window.manual_window, manual)
+        self.assertTrue(manual.isVisible())
 
 
 if __name__ == "__main__":

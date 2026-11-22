@@ -308,14 +308,31 @@ class EngineTests(unittest.TestCase):
         self.assertFalse((self.right / "keep").exists())
         self.assertTrue((self.right / "old/excluded.tmp").exists())
 
-    def test_empty_extra_directory_is_recoverable_after_isolation(self):
+    def test_empty_extra_directory_is_removed_without_archiving_empty_tree(self):
         self.put(self.left, "keep")
         (self.right / "empty").mkdir()
         plan = self.plan()
         next(r for r in plan.rows if r.path == "empty").action = "isolate"
         result = self.run_plan(plan)
-        self.assertTrue((Path(result["recovery"]) / "isolated/right/empty").is_dir())
+        self.assertFalse((Path(result["recovery"]) / "isolated/right/empty").exists())
         self.assertFalse((self.right / "empty").exists())
+
+    def test_isolation_keeps_only_parent_directories_of_actual_files(self):
+        self.put(self.left, "keep")
+        self.put(self.right, "Diversen/Muziek/sub/track.mp3", b"extra music")
+        (self.right / "Diversen/Bond van Doorstarters/empty/deeper").mkdir(parents=True)
+        (self.right / "Diversen/Muziek/empty sibling").mkdir()
+        plan = self.plan()
+        for row in plan.rows:
+            if e.is_extra(plan, row):
+                row.action = "isolate"
+        result = self.run_plan(plan)
+        isolated = Path(result["recovery"]) / "isolated/right"
+        self.assertEqual((isolated / "Diversen/Muziek/sub/track.mp3").read_bytes(), b"extra music")
+        self.assertEqual({str(p.relative_to(isolated)) for p in isolated.rglob('*') if p.is_dir()},
+                         {"Diversen", "Diversen/Muziek", "Diversen/Muziek/sub"})
+        self.assertFalse((self.right / "Diversen").exists())
+        self.assertEqual((self.left / "keep").read_bytes(), b"hello")
 
     def test_atomic_install_never_clobbers_unexpected_file(self):
         self.put(self.right, "staged", b"new")
@@ -329,6 +346,32 @@ class EngineTests(unittest.TestCase):
         self.put(self.left, "Sjalot ♥/film\n4k.mkv")
         self.run_plan(self.plan())
         self.assertTrue((self.right / "Sjalot ♥/film\n4k.mkv").is_file())
+
+    def test_progress_covers_copy_backup_verify_isolation_and_real_completion(self):
+        self.put(self.left, "updated", b"new master")
+        self.put(self.right, "updated", b"old master")
+        self.put(self.right, "extra", b"isolate me")
+        plan = self.plan()
+        next(r for r in plan.rows if r.path == "extra").action = "isolate"
+        updates = []
+        self.run_plan(plan, progress=lambda *args: updates.append(args))
+        self.assertEqual((updates[0][0], updates[0][1]), (0, 2))
+        self.assertEqual((updates[-1][0], updates[-1][1]), (2, 2))
+        self.assertEqual([u[0] for u in updates], sorted(u[0] for u in updates))
+        details = [u[2] for u in updates if isinstance(u[2], e.FileProgress)]
+        self.assertEqual({d.phase for d in details}, {"check", "copy", "backup", "verify", "isolate"})
+        for phase in ("copy", "backup", "verify", "isolate"):
+            self.assertTrue(any(d.phase == phase and d.processed == d.total and d.total > 0 for d in details))
+
+    def test_progress_does_not_claim_completion_if_copy_fails(self):
+        self.put(self.left, "file")
+        updates = []
+        with patch.object(e, "install_new", side_effect=OSError("cannot install")):
+            with self.assertRaises(e.SafetyError):
+                self.run_plan(self.plan(), progress=lambda *args: updates.append(args))
+        self.assertTrue(updates)
+        self.assertTrue(all(completed < total for completed, total, _ in updates))
+        self.assertFalse((self.right / "file").exists())
 
 
 if __name__ == "__main__":

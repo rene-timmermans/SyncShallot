@@ -30,5 +30,7 @@ assert not window.windowIcon().isNull()
 assert window.mode.currentData() == 'left_to_right'
 assert not window.unlock.isChecked()
 window.close()
-print('Unpacked wheel: startup, icon and source protection OK')
+from syncshallot.selftest import run
+assert run(app) == 0
+print('Unpacked wheel: startup, source protection, offline manuals and About window OK')
 """], cwd=target, env=environment, check=True)

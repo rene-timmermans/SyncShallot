@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "syncshallot"
-version = "0.1.1"
+version = "1.0.0"
 license = "GPL-3.0-or-later"
 license-files = ["LICENSE"]
 description = "De gemakkelijkste manier om je backup schijven te synchroniseren, zonder onnodige bestanden op je backups te laten staan!"
@@ -16,7 +16,7 @@ dependencies = ["PySide6>=6.6,<7"]
 syncshallot = "syncshallot.app:main"
 
 [tool.setuptools.package-data]
-syncshallot = ["assets/*"]
+syncshallot = ["assets/*", "assets/manual/*.json"]
 
 [tool.setuptools.packages.find]
 include = ["syncshallot*"]

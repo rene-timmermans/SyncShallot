@@ -1,0 +1,65 @@
+{
+  "intro": "SyncShallot vergleicht eine maßgebliche Sammlung mit ihrer Sicherung, ergänzt neue und geänderte Dateien und zeigt zurückgebliebene Dateien. Die Quelle ist standardmäßig geschützt.",
+  "sections": [
+    {
+      "anchor": "start",
+      "title": "Start: Quelle und Ziel wählen",
+      "body": "<p>Wählen Sie links die Quelle und rechts den Sicherungsordner. Lokale Ordner, eingehängte USB-Laufwerke und Netzwerkfreigaben funktionieren gleich. SyncShallot bindet keine Laufwerke ein. Beide Ordner müssen existieren und dürfen nicht ineinander liegen; das Dateisystemwurzelverzeichnis ist ausgeschlossen.</p><p>Beispiel: Auf der Freigabe ersetzt ein 4K-Video die alte 720p-Version. Kopieren ergänzt die Sicherung; <b>Nur im Ziel</b> zeigt die zurückgebliebene alte Version.</p>"
+    },
+    {
+      "anchor": "workspace",
+      "title": "Zwei Bereiche und Filter",
+      "body": "<p>Gleiche relative Pfade stehen in derselben Zeile. Ein Strich bedeutet, dass der Eintrag auf dieser Seite fehlt. Die Spalten zeigen Größe, Änderungsdatum, Vergleich und Aktion. Ziehen Sie die Spaltengrenzen; die Breiten werden gespeichert. Beide Bereiche scrollen gemeinsam.</p><p>Filter: <b>Alles</b>, <b>Unterschiede</b>, <b>Nur im Ziel</b> und <b>Konflikte und übersprungen</b>. Die Suche filtert relative Pfade. Filter ändern nur die Anzeige: <b>bereits geplante Aktionen bleiben auch außerhalb des Filters aktiv</b>. Die Zusammenfassung zählt alle Einträge und Aktionen.</p>"
+    },
+    {
+      "anchor": "scan",
+      "title": "Schnell oder gründlich vergleichen",
+      "body": "<p><b>Schnell</b> vergleicht Größe und Änderungsdatum mit zwei Sekunden Toleranz. Gleiche Größe und ähnliche Daten können unterschiedliche Inhalte verdecken. Unterschiedliche Daten können umgekehrt eine Kopieraktion auslösen, obwohl der Inhalt gleich ist.</p><p><b>Gründlich</b> liest alle normalen Dateien beider Seiten und vergleicht SHA-256. Gleiche Inhalte erfordern keine Kopie, auch bei unterschiedlichen Daten. Bei großen Medien über USB oder Netzwerk dauert dies länger. Gründlich bietet mehr Sicherheit, aber keine garantierte Fehlerfreiheit.</p><p><b>Vergleichen</b> schreibt keine Dateien. Die Ausführung benötigt eine gesonderte Bestätigung.</p>"
+    },
+    {
+      "anchor": "direction",
+      "title": "Richtung und Quellenschutz",
+      "body": "<p>Standard ist <b>Links → rechts</b>: Nur rechts darf sich ändern. Die linke Quelle ersetzt abweichende rechte Dateien auch dann, wenn rechts ein neueres Datum steht.</p><p>Erlauben Sie unter <b>Optionen → Einstellungen…</b> ausdrücklich Änderungen links, um <b>Rechts → links</b> mit geschützter rechter Quelle oder <b>Links ↔ rechts</b> mit Änderungen auf beiden Seiten zu aktivieren. Fehlende Dateien werden ergänzt. Bei unterschiedlichen Dateien bestimmen Sie die Kopierrichtung selbst. Löschungen werden nicht übertragen.</p><p>Die Freigabe für Änderungen links wird bei Neustart, Sprachwechsel und Profilöffnung zurückgesetzt. Symbolische Links, Spezialdateien und Datei/Ordner-Konflikte werden angezeigt und übersprungen.</p>"
+    },
+    {
+      "anchor": "actions",
+      "title": "Aktionen auswählen und festlegen",
+      "body": "<p>Bei einer Richtung erhalten fehlende Quelldateien und unterschiedliche Dateien automatisch Kopieraktionen. Zusätzliche Zieldateien bleiben zunächst bestehen. Im Zwei-Wege-Modus bleiben unterschiedliche Dateien ohne Richtungswahl unverändert.</p><ol><li>Wählen Sie Zeilen mit der Maus; Strg und Umschalt erweitern die Auswahl. Strg+A wählt alle sichtbaren Zeilen im Filter.</li><li>Wählen Sie unten eine Aktion.</li><li>Klicken Sie auf <b>Aktion festlegen</b>; die Auswahl im Listenfeld allein genügt nicht.</li><li>Prüfen Sie die Spalte <b>Geplante Aktion</b>.</li></ol><p>Eine Ordnerauswahl umfasst Untereinträge. Aktionen gelten nur für passende Zeilen. <b>Unverändert lassen</b> entfernt ausgewählte Aktionen. Beim Kopieren werden notwendige fehlende übergeordnete Ordner ebenfalls aktiviert.</p>"
+    },
+    {
+      "anchor": "extras",
+      "title": "Zusätzliche Dateien isolieren oder löschen",
+      "body": "<p><b>Nur im Ziel</b> zeigt Dateien ohne Gegenstück in der Quelle. <b>Isolieren · wiederherstellbar</b> erstellt zuerst eine geprüfte Sicherung und entfernt dann die zusätzliche Datei aus dem Ziel. Im Sicherungsordner entstehen nur die für echte Dateien benötigten übergeordneten Ordner. Leere zusätzliche Zielordner werden entfernt, ohne leere Kopien zu archivieren.</p><p><b>Endgültig löschen · KEINE Sicherung</b> verwendet weder Papierkorb noch Sicherung. Die Bestätigung verlangt exakt <b>DELETE</b>. Andere ausgewählte Kopier- und Isolationsaktionen laufen im selben Durchgang.</p><p>Versteckte Dateien werden einbezogen. Auch <code>.Trash-1000</code> kann zusätzlich sein; Papierkorbordner werden nicht automatisch ausgeschlossen. Bei Bedarf vor dem Vergleich ein Ausschlussmuster setzen.</p>"
+    },
+    {
+      "anchor": "execute",
+      "title": "Prüfen und ausführen",
+      "body": "<p><b>Aktionen prüfen…</b> zeigt alle geplanten Aktionen, auch ausgefilterte. Prüfen Sie beide Hauptpfade, Richtung, einzelne Dateien und die Anzahlen für neue Dateien, Überschreiben, Isolieren und Löschen. Das Öffnen führt nichts aus.</p><p>Bestätigen Sie die Prüfung und wählen Sie <b>Diese Aktionen ausführen</b>. Zuerst werden beide Dateilisten erneut geprüft. Vor dem Überschreiben entsteht immer eine geprüfte Sicherung. Neue Kopien werden im Ziel zwischengespeichert und vor dem Einsetzen zurückgelesen.</p><p>Danach startet ein neuer Vergleich mit derselben Methode; gründlich kann erneut lange dauern. Stoppen und Fehler machen abgeschlossene Aktionen nicht rückgängig.</p>"
+    },
+    {
+      "anchor": "progress",
+      "title": "Fortschritt und Stoppen",
+      "body": "<p>Der Gesamtbalken zeigt abgeschlossene Aktionen und deren prozentualen Anteil nach Anzahl. Ein großes Video kann länger dauern als Hunderte kleiner Dateien. Ordner zählen als Aktionen.</p><p>Der zweite Balken zeigt Bytes und Prozent innerhalb der aktuellen Datei. Die Phase nennt Vergleichen, Kopieren, Isolieren, Sichern oder Prüfen. Bei jeder neuen Phase beginnt dieser Balken erneut.</p><p>Beim Scannen ist die Gesamtzahl noch unbekannt; der Gesamtbalken zeigt Aktivität ohne erfundenen Gesamtprozentsatz. Gründliche Scans zeigen den Fortschritt der aktuellen Datei. <b>Stoppen</b> fordert Abbruch am nächsten Prüfpunkt an; Dateisystemaufrufe können noch dauern. Abgeschlossene Aktionen bleiben bestehen.</p>"
+    },
+    {
+      "anchor": "recovery",
+      "title": "Sicherungen und manuelles Wiederherstellen",
+      "body": "<p>Wählen Sie unter <b>Optionen → Einstellungen…</b> einen Sicherungsordner außerhalb beider gewählten Ordner. Standard: <code>~/.local/share/SyncShallot/recovery</code>. Wählen Sie für große Medien ausreichend Platz. Zum Ziel <code>/media/usb/Media</code> passt beispielsweise ein separater Ordner <code>/media/usb/Recovery</code>.</p><p>Jeder Durchlauf bekommt einen datierten, eindeutigen Ordner. Alte Versionen liegen unter <code>overwritten/left</code> oder <code>overwritten/right</code>, isolierte Dateien unter <code>isolated/left</code> oder <code>isolated/right</code> mit ihren relativen Pfaden. Leere Isolationszweige werden nicht aufbewahrt. <code>journal.jsonl</code> enthält Fortschritt und Originalpfade.</p><p>Öffnen über <b>Datei → Sicherungsordner öffnen</b>. Stellen Sie Dateien mit dem Dateimanager manuell wieder her; prüfen Sie vor dem Überschreiben vorhandene Versionen. Automatisches Wiederherstellen und automatische Bereinigung der Sicherungen sind nicht vorhanden.</p>"
+    },
+    {
+      "anchor": "options",
+      "title": "Einstellungen, Ausschlüsse und Sprache",
+      "body": "<p><b>Optionen → Einstellungen…</b> enthält Quellfreigabe, Scanerklärung, Sicherungsordner und Ausschlussmuster. Änderungen gelten sofort. Geänderte Scanoptionen machen den bisherigen Vergleich ungültig.</p><p>Ein Muster pro Zeile, etwa <code>*.tmp</code>, <code>.git</code> oder <code>.Trash-*</code>. Muster gelten auf beiden Seiten für Namen oder relative Pfade und beachten Groß-/Kleinschreibung. Ausgeschlossene Ordner werden mit Inhalt übersprungen. Leer bedeutet alles einbeziehen, auch versteckte Dateien.</p><p><b>Optionen → Sprache</b> bietet Niederländisch, Englisch, Deutsch, Französisch und Spanisch. Sprachwechsel öffnet das Hauptfenster neu, verwirft den Plan und aktiviert Quellenschutz. Die Anleitung folgt der gewählten Sprache.</p>"
+    },
+    {
+      "anchor": "menus",
+      "title": "Dateimenü, Anleitung und Tastenkürzel",
+      "body": "<p><b>Datei → Profil speichern…</b> speichert Pfade, Vergleichsmethode, Sicherungsordner und Ausschlüsse als JSON. <b>Profil öffnen…</b> lädt diese mit Links → rechts als sicherem Standard, ohne Aktionen auszuführen. Profile entsperren die Quelle nicht und stellen keine alten Löschaktionen wieder her.</p><p><b>Vergleich exportieren…</b> speichert einen JSON-Bericht, keinen ausführbaren Aktionsplan. Diese Offline-Anleitung öffnet sich über <b>Hilfe → Handbuch</b> oder <b>F1</b> und kann neben der Arbeit geöffnet bleiben. <b>Über SyncShallot…</b> zeigt Version, Autor, Lizenz und Website.</p><p>Strg+F fokussiert die Suche. Eingabe und F3 finden den nächsten Treffer, Umschalt+F3 den vorherigen. Treffer werden hervorgehoben. <b>Inhalt</b> öffnet das Inhaltsverzeichnis; <b>Vorheriges</b> und <b>Nächstes</b> wechseln das Thema.</p>"
+    },
+    {
+      "anchor": "problems",
+      "title": "Meldungen und Grenzen",
+      "body": "<p>Geänderte Dateien, ersetzte Ordner und getrennte Laufwerke machen den Vergleich ungültig. Verbindung prüfen und erneut vergleichen. Eine Quelle ohne normale Dateien blockiert Bereinigungen zusätzlich. Ordner mit ausgeschlossenen, nicht ausgewählten oder nicht unterstützten Kindern können nicht entfernt werden.</p><p>Neue Kopien und Sicherungen benötigen freien Platz. Fehler stoppen weitere Aktionen; abgeschlossene bleiben bestehen und werden protokolliert. Prüfen Sie nach einem Abbruch Meldung und Sicherungsordner. Nach einem harten Absturz kann <code>.syncshallot-*.tmp</code> zurückbleiben.</p><p>Gleich bedeutet gleiche normale Dateiinhalte und relative Pfade innerhalb der Filter. SyncShallot erstellt kein Festplattenabbild und repliziert keine ACLs, erweiterten Attribute, Eigentümer oder Hardlink-Beziehungen. Beginnen Sie mit Testordnern und behalten Sie eine unabhängige Sicherung.</p>"
+    }
+  ]
+}

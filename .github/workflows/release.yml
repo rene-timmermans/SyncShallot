@@ -204,7 +204,7 @@ jobs:
         with:
           path: downloads
           merge-multiple: true
-      - name: Downloads als prerelease publiceren
+      - name: Stabiele release publiceren
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ needs.source.outputs.version }}
@@ -217,5 +217,5 @@ jobs:
             echo 'Deze release bestaat al; bestaande tags en downloads worden niet overschreven.' >&2
             exit 1
           fi
-          gh release create "$tag" downloads/* --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "SyncShallot $VERSION — installatiepakketten" --notes-file "docs/releases/$VERSION.md" --prerelease --draft
-          gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --draft=false
+          gh release create "$tag" downloads/* --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "SyncShallot $VERSION" --notes-file "docs/releases/$VERSION.md" --draft
+          gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --draft=false --prerelease=false --latest

@@ -1,0 +1,65 @@
+{
+  "intro": "SyncShallot compare une collection de référence à sa sauvegarde, ajoute les fichiers nouveaux ou modifiés et révèle ceux restés sur la sauvegarde. La source est protégée par défaut.",
+  "sections": [
+    {
+      "anchor": "start",
+      "title": "Démarrer : choisir la source et la destination",
+      "body": "<p>Choisissez la source à gauche et le dossier de sauvegarde à droite. Dossiers locaux, disques USB montés et partages réseau montés fonctionnent de la même manière. SyncShallot ne monte aucun disque. Les deux dossiers doivent exister et ne pas être imbriqués ; la racine du système de fichiers est interdite.</p><p>Exemple : une vidéo 4K remplace l’ancienne version 720p sur le partage. La copie complète la sauvegarde ; <b>Uniquement dans la destination</b> révèle l’ancienne version restante.</p>"
+    },
+    {
+      "anchor": "workspace",
+      "title": "Les deux panneaux et les filtres",
+      "body": "<p>Les chemins relatifs correspondants occupent la même ligne. Un tiret indique une absence de ce côté. Les colonnes montrent taille, date, comparaison et action prévue. Faites glisser leurs bordures pour ajuster les largeurs, qui sont conservées. Les deux panneaux défilent ensemble.</p><p>Filtres : <b>Tout</b>, <b>Différences</b>, <b>Uniquement dans la destination</b>, <b>Conflits et ignorés</b>. La recherche filtre les chemins relatifs. Le filtre ne change que l’affichage : <b>les actions déjà prévues restent actives même hors du filtre</b>. Le résumé compte tous les éléments et actions.</p>"
+    },
+    {
+      "anchor": "scan",
+      "title": "Comparaison rapide ou approfondie",
+      "body": "<p><b>Rapide</b> compare taille et date avec deux secondes de tolérance. Une taille et des dates proches peuvent cacher un contenu différent. Inversement, une date différente peut proposer une copie malgré un contenu identique.</p><p><b>Approfondie</b> lit tous les fichiers ordinaires des deux côtés et compare SHA-256. Un contenu identique n’exige pas de copie, même avec des dates différentes. Cette méthode prend plus de temps, surtout pour les médias via USB ou réseau. Elle est recommandée pour davantage de certitude, sans garantie absolue.</p><p><b>Comparer</b> ne modifie aucun fichier. L’exécution demande une confirmation distincte.</p>"
+    },
+    {
+      "anchor": "direction",
+      "title": "Direction et protection de la source",
+      "body": "<p>Par défaut, <b>Gauche → droite</b> ne permet de modifier que la droite. Une version droite différente est remplacée par celle de gauche, même si la date à droite est plus récente. La source choisie fait autorité.</p><p>Dans <b>Options → Paramètres…</b>, autorisez explicitement les changements à gauche pour choisir <b>Droite → gauche</b>, avec droite protégée, ou <b>Gauche ↔ droite</b>, avec modifications possibles des deux côtés. Les fichiers absents sont ajoutés. Pour les fichiers différents, choisissez vous-même le sens de copie. Les suppressions ne sont pas propagées.</p><p>L’autorisation à gauche est réinitialisée au redémarrage, au changement de langue et à l’ouverture d’un profil. Liens symboliques, fichiers spéciaux et conflits fichier/dossier sont signalés et ignorés.</p>"
+    },
+    {
+      "anchor": "actions",
+      "title": "Choisir et définir les actions",
+      "body": "<p>En sens unique, les fichiers source absents et les fichiers différents reçoivent automatiquement une action de copie. Les fichiers supplémentaires restent par défaut. En mode bidirectionnel, les fichiers différents sans direction choisie restent inchangés.</p><ol><li>Sélectionnez les lignes ; Ctrl et Maj étendent la sélection. Ctrl+A sélectionne toutes les lignes visibles du filtre.</li><li>Choisissez une action sous la liste.</li><li>Cliquez sur <b>Définir l’action</b> : le menu déroulant seul ne suffit pas.</li><li>Vérifiez <b>Action prévue</b>.</li></ol><p>La sélection d’un dossier inclut ses descendants. Seules les actions autorisées s’appliquent. <b>Laisser inchangé</b> retire les actions sélectionnées. La copie active aussi les dossiers parents manquants nécessaires.</p>"
+    },
+    {
+      "anchor": "extras",
+      "title": "Isoler ou supprimer les fichiers supplémentaires",
+      "body": "<p><b>Uniquement dans la destination</b> montre les fichiers absents de la source. <b>Isoler · récupérable</b> crée d’abord une copie vérifiée, puis retire le fichier de la destination. La récupération ne crée que les dossiers parents nécessaires aux fichiers isolés. Les dossiers supplémentaires vides sont retirés de la destination sans archiver une structure vide.</p><p><b>Supprimer définitivement · SANS copie</b> n’utilise ni corbeille ni copie de récupération. La confirmation exige exactement <b>DELETE</b>. Les autres actions de copie ou d’isolement sélectionnées sont exécutées dans la même opération.</p><p>Les fichiers cachés sont inclus : <code>.Trash-1000</code> peut donc être supplémentaire. Aucun dossier de corbeille n’est exclu automatiquement. Excluez-le dans les paramètres avant comparaison si nécessaire.</p>"
+    },
+    {
+      "anchor": "execute",
+      "title": "Vérifier et exécuter",
+      "body": "<p><b>Vérifier les actions…</b> affiche toutes les actions prévues, y compris celles masquées par les filtres. Vérifiez les deux chemins racines, la direction, chaque fichier et les nombres de créations, écrasements, isolements et suppressions. L’ouverture de cet écran ne lance rien.</p><p>Cochez la confirmation et choisissez <b>Exécuter ces actions</b>. Les deux listes sont d’abord revérifiées. Un écrasement est toujours précédé d’une copie de récupération vérifiée. Les nouvelles copies sont préparées et relues sur la destination avant installation.</p><p>Une nouvelle comparaison suit avec la même méthode ; une analyse approfondie peut donc encore durer. L’arrêt ou une erreur n’annule pas les actions déjà terminées.</p>"
+    },
+    {
+      "anchor": "progress",
+      "title": "Progression et arrêt",
+      "body": "<p>La barre totale affiche les actions terminées et leur pourcentage selon leur nombre. Une grande vidéo peut prendre plus de temps que des centaines de petits fichiers. Les dossiers comptent aussi comme actions.</p><p>La seconde barre montre les octets et le pourcentage du fichier courant, avec la phase : comparaison, copie, isolement, sauvegarde ou vérification. Elle repart de zéro à chaque phase ; c’est normal.</p><p>Pendant l’analyse, le total est encore inconnu : la barre globale montre une activité sans pourcentage inventé. En mode approfondi, la progression du fichier courant reste visible. <b>Arrêter</b> demande l’annulation au prochain point de contrôle ; un appel au système de fichiers peut encore prendre du temps. Les actions terminées restent effectuées.</p>"
+    },
+    {
+      "anchor": "recovery",
+      "title": "Récupération et restauration manuelle",
+      "body": "<p>Choisissez le dossier de récupération dans <b>Options → Paramètres…</b>, en dehors des deux dossiers sélectionnés. Par défaut : <code>~/.local/share/SyncShallot/recovery</code>. Prévoyez de la place pour les grands médias. Pour une destination <code>/media/usb/Media</code>, un dossier séparé <code>/media/usb/Recovery</code> peut convenir.</p><p>Chaque exécution a son dossier daté et unique. Les anciennes versions sont dans <code>overwritten/left</code> ou <code>overwritten/right</code> ; les fichiers isolés dans <code>isolated/left</code> ou <code>isolated/right</code>, avec leurs chemins relatifs. Les branches vides ne sont pas conservées. <code>journal.jsonl</code> enregistre progression et chemins originaux.</p><p>Ouvrez avec <b>Fichier → Ouvrir la récupération</b>. Restaurez manuellement avec votre gestionnaire de fichiers, en vérifiant la version existante avant écrasement. La restauration et le nettoyage automatiques ne sont pas disponibles.</p>"
+    },
+    {
+      "anchor": "options",
+      "title": "Paramètres, exclusions et langue",
+      "body": "<p><b>Options → Paramètres…</b> contient le déverrouillage de la source, les explications, le dossier de récupération et les exclusions. Les changements s’appliquent immédiatement. Modifier les paramètres d’analyse invalide la comparaison précédente.</p><p>Un motif par ligne, par exemple <code>*.tmp</code>, <code>.git</code> ou <code>.Trash-*</code>. Ils s’appliquent des deux côtés au nom ou au chemin relatif et respectent la casse. Un dossier exclu et son contenu sont ignorés. Vide signifie tout inclure, même les fichiers cachés.</p><p><b>Options → Langue</b> propose néerlandais, anglais, allemand, français et espagnol. Changer de langue rouvre la fenêtre principale, efface le plan et réactive la protection. Le manuel suit la langue sélectionnée.</p>"
+    },
+    {
+      "anchor": "menus",
+      "title": "Menu Fichier, manuel et raccourcis",
+      "body": "<p><b>Fichier → Enregistrer un profil…</b> conserve chemins, méthode, récupération et exclusions en JSON. <b>Ouvrir un profil…</b> les recharge avec gauche → droite comme valeur sûre, sans exécuter d’action. Les profils ne déverrouillent pas la source et ne restaurent aucune ancienne action de suppression.</p><p><b>Exporter la comparaison…</b> crée un rapport JSON, pas un plan exécutable. Ce manuel hors ligne s’ouvre par <b>Aide → Manuel</b> ou <b>F1</b> et peut rester ouvert à côté du travail. <b>À propos de SyncShallot…</b> affiche version, auteur, licence et site.</p><p>Ctrl+F active la recherche. Entrée et F3 cherchent le résultat suivant ; Maj+F3 le précédent. Les résultats sont surlignés. <b>Sommaire</b> revient à la table des matières ; <b>Précédent</b> et <b>Suivant</b> changent de sujet.</p>"
+    },
+    {
+      "anchor": "problems",
+      "title": "Messages et limites",
+      "body": "<p>Un fichier modifié, un dossier remplacé ou un disque déconnecté invalide la comparaison. Vérifiez la connexion et comparez à nouveau. Une source sans fichiers ordinaires bloque le nettoyage par précaution. Un dossier contenant des enfants exclus, non sélectionnés ou non pris en charge ne peut pas être retiré.</p><p>Copies nouvelles et récupération nécessitent de l’espace libre. Une erreur arrête les actions suivantes ; les actions terminées restent et sont journalisées. Consultez d’abord le message et la récupération après une interruption. Un arrêt brutal peut laisser un fichier <code>.syncshallot-*.tmp</code>.</p><p>L’égalité porte sur les contenus ordinaires et les chemins relatifs dans les filtres choisis. SyncShallot ne crée pas d’image disque et ne reproduit ni ACL, ni attributs étendus, ni propriétaires, ni relations de liens physiques. Commencez par des dossiers d’essai et gardez une sauvegarde indépendante.</p>"
+    }
+  ]
+}

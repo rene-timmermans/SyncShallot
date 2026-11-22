@@ -4,6 +4,9 @@ import tempfile
 from PySide6.QtCore import QSettings
 from . import __version__, engine
 from .app import MainWindow
+from .about import AboutDialog
+from .manual import ManualWindow, load_manual
+from .i18n import LANGUAGES
 
 
 def run(app):
@@ -37,9 +40,23 @@ def run(app):
         if window.windowIcon().isNull() or window.unlock.isChecked() or window.mode.currentData() != "left_to_right":
             raise RuntimeError("Selftest: icon or default protection failed")
         window.compared(engine.compare(source, target))
+        for language in LANGUAGES:
+            if len(load_manual(language)['sections']) != 12:
+                raise RuntimeError("Selftest: offline manual is incomplete")
+        manual = ManualWindow(window, window.tr)
+        manual.search.setText('SHA-256')
+        if not manual.find():
+            raise RuntimeError("Selftest: manual search failed")
+        about = AboutDialog(window, window.tr)
+        if about.mascot.pixmap().isNull() or __version__ not in about.description.text():
+            raise RuntimeError("Selftest: About window failed")
+        manual.close()
+        manual.deleteLater()
+        about.close()
+        about.deleteLater()
         app.processEvents()
         window.close()
         window.deleteLater()
         app.processEvents()
-    print(f"SyncShallot {__version__}: installed interface, source protection, synchronization, isolation and recovery OK")
+    print(f"SyncShallot {__version__}: installed interface, source protection, synchronization, isolation, recovery and offline help OK")
     return 0

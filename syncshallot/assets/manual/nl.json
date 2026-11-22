@@ -1,0 +1,65 @@
+{
+  "intro": "SyncShallot vergelijkt een leidende verzameling met een back-up, vult nieuwe en gewijzigde bestanden aan en maakt achtergebleven bestanden zichtbaar. Kies bewust wat er gewijzigd wordt; de bron is standaard beschermd.",
+  "sections": [
+    {
+      "anchor": "start",
+      "title": "Beginnen: bron en doel kiezen",
+      "body": "<p>Kies links je bronmap en rechts de back-upmap. Lokale mappen, gemounte USB-schijven en gemounte netwerkshares werken op dezelfde manier. SyncShallot mount zelf niets. Beide mappen moeten bestaan en mogen elkaar niet bevatten; de bestandssysteemroot is niet toegestaan.</p><p>Voorbeeld: de netwerkshare bevat alleen nog een 4K-video. Op USB staan die video en de oude 720p-versie. Kopiëren vult de back-up aan; het filter <b>Extra op doel</b> maakt de oude versie zichtbaar.</p>"
+    },
+    {
+      "anchor": "workspace",
+      "title": "De twee panelen en filters",
+      "body": "<p>Overeenkomstige relatieve paden staan op dezelfde rij. Een streepje betekent dat het item aan die kant ontbreekt. De kolommen tonen grootte, wijzigingsdatum, vergelijking en geplande actie. Sleep de kolomgrenzen om de breedte aan te passen. Breedtes blijven bewaard; beide panelen scrollen samen.</p><p>De filters zijn <b>Alles</b>, <b>Verschillen</b>, <b>Extra op doel</b> en <b>Conflicten en overgeslagen</b>. Zoeken filtert op relatief pad. Een filter verandert alleen wat je ziet: <b>eerder geplande acties blijven actief, ook buiten het filter</b>. De samenvatting telt alle items en acties.</p>"
+    },
+    {
+      "anchor": "scan",
+      "title": "Snel en grondig vergelijken",
+      "body": "<p><b>Snel</b> vergelijkt grootte en wijzigingsdatum, met twee seconden datumtolerantie. Bestanden met dezelfde grootte en vrijwel dezelfde datum kunnen toch een andere inhoud hebben. Een datumverschil kan omgekeerd een kopieeractie opleveren terwijl de inhoud gelijk is.</p><p><b>Grondig</b> leest alle gewone bestanden aan beide kanten en vergelijkt SHA-256. Bij gelijke inhoud wordt geen kopie voorgesteld, ook als de datums verschillen. Dit duurt langer, vooral bij veel media via USB of netwerk. Grondig wordt aanbevolen voor meer zekerheid; geen methode garandeert foutloosheid.</p><p><b>Vergelijken</b> schrijft geen bestanden. Er is daarna nog een afzonderlijke bevestiging nodig om acties uit te voeren.</p>"
+    },
+    {
+      "anchor": "direction",
+      "title": "Richting en bronbescherming",
+      "body": "<p><b>Links → rechts</b> is de standaard: alleen rechts kan wijzigen. Een afwijkende rechterversie wordt vervangen door de linkerversie, ook als rechts een nieuwere datum heeft. De gekozen bron is leidend.</p><p>Via <b>Opties → Instellingen…</b> kun je bewust toestaan dat links wordt gewijzigd. Daarna kun je <b>Rechts → links</b> kiezen, waarbij rechts beschermd is, of <b>Links ↔ rechts</b>, waarbij beide kanten kunnen wijzigen. Ontbrekende bestanden worden dan aangevuld; bij verschillende bestanden kies je zelf de kopieerrichting. Verwijderingen worden niet automatisch doorgegeven.</p><p>Bronontgrendeling wordt niet bewaard na herstart, taalwissel of het openen van een profiel. Symbolische links, speciale bestanden en bestand/map-conflicten worden gemeld en overgeslagen.</p>"
+    },
+    {
+      "anchor": "actions",
+      "title": "Acties kiezen en instellen",
+      "body": "<p>Na een vergelijking krijgen ontbrekende bronbestanden en verschillende bestanden automatisch een kopieeractie in de gekozen enkele richting. Extra doelbestanden blijven standaard staan. Bij twee richtingen blijven verschillende bestanden zonder keuze onaangeroerd.</p><ol><li>Selecteer de rijen met de muis; Ctrl en Shift breiden de selectie uit. Ctrl+A selecteert alle zichtbare rijen binnen het filter.</li><li>Kies onderaan een actie.</li><li>Klik op <b>Actie instellen</b>. Alleen kiezen in de keuzelijst is nog niet genoeg.</li><li>Controleer de kolom <b>Geplande actie</b>.</li></ol><p>Een mapselectie omvat ook onderliggende rijen. Acties worden alleen toegepast waar ze zijn toegestaan. <b>Niets wijzigen</b> haalt de geselecteerde acties weg. Benodigde ontbrekende bovenliggende mappen krijgen bij kopiëren ook een kopieeractie.</p>"
+    },
+    {
+      "anchor": "extras",
+      "title": "Extra bestanden isoleren of verwijderen",
+      "body": "<p><b>Extra op doel</b> toont wat alleen op de back-up staat. <b>Isoleren · herstelbaar</b> maakt eerst een gecontroleerde kopie in de herstelmap en verwijdert daarna het extra bestand van het doel. Alleen mappen die nodig zijn voor de geïsoleerde bestanden worden daar aangemaakt. Lege extra mappen worden van het doel opgeruimd zonder een lege tegenhanger in de herstelmap.</p><p><b>Definitief verwijderen · GEEN herstelkopie</b> gebruikt geen prullenbak en bewaart het verwijderde bestand niet. De bevestiging vereist exact <b>DELETE</b>. Andere gekozen kopieer- of isolatieacties worden in dezelfde uitvoering meegenomen.</p><p>Verborgen bestanden tellen mee. Ook een map als <code>.Trash-1000</code> kan dus extra zijn; er is geen automatische prullenbakuitzondering. Je kunt zulke mappen vooraf uitsluiten bij de instellingen.</p>"
+    },
+    {
+      "anchor": "execute",
+      "title": "Acties controleren en uitvoeren",
+      "body": "<p><b>Acties controleren…</b> toont alle geplande acties, ook die welke door een filter verborgen zijn. Controleer beide hoofdpaden, de richting, de afzonderlijke bestanden en de aantallen nieuwe bestanden, overschrijvingen, isolaties en verwijderingen. Het openen van dit overzicht voert niets uit.</p><p>Vink aan dat je alles hebt gecontroleerd en kies <b>Deze acties uitvoeren</b>. Vooraf worden de bestandenlijsten opnieuw gecontroleerd. Bij overschrijven wordt altijd eerst een gecontroleerde herstelkopie gemaakt. Nieuwe kopieën worden tijdelijk op het doel geschreven en teruggelezen vóór plaatsing.</p><p>Na afloop vergelijkt het programma automatisch opnieuw met dezelfde scanmethode. Een grondige controle kan daarom opnieuw lang duren. Stoppen of een fout draait eerder voltooide acties niet terug.</p>"
+    },
+    {
+      "anchor": "progress",
+      "title": "Voortgang en stoppen",
+      "body": "<p>De totaalbalk toont hoeveel acties zijn afgerond en het percentage op basis van het aantal acties. Eén grote video kan langer duren dan honderden kleine bestanden. Mappen tellen ook als acties.</p><p>De tweede balk toont gelezen of geschreven bytes en het percentage van het huidige bestand. De fase vermeldt vergelijken, kopiëren, isoleren, herstelkopie maken of kopie controleren. Bij een volgende fase begint deze balk opnieuw; dat is normaal.</p><p>Tijdens een scan is het totaal nog onbekend. De totaalbalk toont daarom activiteit zonder verzonnen totaalpercentage. Bij grondig vergelijken zie je wel de voortgang binnen het huidige bestand. <b>Stoppen</b> vraagt annulering bij het volgende controlepunt; een bestandssysteemoproep kan nog even duren. Voltooide acties blijven uitgevoerd.</p>"
+    },
+    {
+      "anchor": "recovery",
+      "title": "Herstelkopieën en handmatig terugzetten",
+      "body": "<p>Kies de herstelmap onder <b>Opties → Instellingen…</b>. Deze moet buiten beide gekozen mappen liggen. Standaard is dat <code>~/.local/share/SyncShallot/recovery</code>. Voor grote media kun je een ruimere locatie kiezen. Als het doel bijvoorbeeld <code>/media/usb/Media</code> is, kan <code>/media/usb/Herstel</code> een geschikte aparte map zijn.</p><p>Elke uitvoering heeft een eigen map met datum en unieke code. Overschreven versies staan onder <code>overwritten/left</code> of <code>overwritten/right</code>; geïsoleerde bestanden onder <code>isolated/left</code> of <code>isolated/right</code>, met hun oorspronkelijke relatieve pad. Lege takken worden bij isoleren niet bewaard. Het bestand <code>journal.jsonl</code> registreert voortgang en oorspronkelijke paden.</p><p>Open de map via <b>Bestand → Herstelmap openen</b>. Zet bestanden desgewenst met je bestandsbeheerder handmatig terug en controleer vóór overschrijven de bestaande versie. Automatisch terugzetten is nog niet beschikbaar. Hersteldata wordt niet automatisch opgeschoond.</p>"
+    },
+    {
+      "anchor": "options",
+      "title": "Instellingen, uitsluitingen en taal",
+      "body": "<p><b>Opties → Instellingen…</b> bevat de bronontgrendeling, uitleg van scanmethoden, herstelmap en uitsluitpatronen. Instellingen worden direct toegepast. Wijzigingen aan scaninstellingen maken de oude vergelijking ongeldig.</p><p>Geef één patroon per regel op, bijvoorbeeld <code>*.tmp</code>, <code>.git</code> of <code>.Trash-*</code>. Patronen gelden aan beide kanten, op de naam of het relatieve pad, en zijn hoofdlettergevoelig. Een uitgesloten map wordt met zijn inhoud overgeslagen. Leeg betekent alles meenemen, ook verborgen bestanden.</p><p><b>Opties → Taal</b> biedt Nederlands, Engels, Duits, Frans en Spaans. Een taalwissel opent het hoofdvenster opnieuw, wist het vergelijkingsplan en schakelt bronbescherming weer in. De handleiding volgt de gekozen taal.</p>"
+    },
+    {
+      "anchor": "menus",
+      "title": "Bestandsmenu, handleiding en sneltoetsen",
+      "body": "<p><b>Bestand → Profiel opslaan…</b> bewaart paden, scanmethode, herstelmap en uitsluitingen als JSON. <b>Profiel openen…</b> laadt die instellingen, met links → rechts als veilige standaard. Het voert geen acties uit. Een profiel bevat geen toestemming om de bron te wijzigen en herstelt geen eerder gekozen verwijderacties.</p><p><b>Vergelijking exporteren…</b> bewaart het overzicht als JSON. Dit is een verslag, geen uitvoerbaar actieprofiel. Via <b>Help → Handleiding</b> of <b>F1</b> open je dit offline venster. Het kan naast je werk open blijven. <b>Over SyncShallot…</b> toont versie, maker, licentie en website.</p><p>In de handleiding: Ctrl+F zoekt, Enter en F3 gaan naar de volgende treffer, Shift+F3 naar de vorige. Treffers worden gemarkeerd. <b>Inhoud</b> gaat naar de inhoudsopgave; <b>Vorige</b> en <b>Volgende</b> bladeren door onderwerpen.</p>"
+    },
+    {
+      "anchor": "problems",
+      "title": "Meldingen en grenzen",
+      "body": "<p>Bij een gewijzigd bestand of vervangen of verdwenen mount is een oude vergelijking niet meer bruikbaar: controleer de verbinding en vergelijk opnieuw. Een bron zonder gewone bestanden blokkeert opruimacties als extra bescherming. Een map met uitgesloten, niet geselecteerde of niet ondersteunde kinderen kan niet worden verwijderd.</p><p>Er is vrije ruimte nodig voor nieuwe kopieën en herstelkopieën. Een fout stopt verdere acties; al voltooide acties blijven staan en worden in het logboek vermeld. Controleer bij een afgebroken uitvoering eerst de melding en de herstelmap. Na een harde crash kan een tijdelijk <code>.syncshallot-*.tmp</code>-bestand overblijven.</p><p>Gelijk betekent dezelfde gewone bestandsinhoud en relatieve paden binnen de gekozen filters. SyncShallot maakt geen schijfimage en kopieert geen ACL’s, uitgebreide attributen, eigenaarschap of hardlinkrelaties. Begin met proefmappen en bewaar een onafhankelijke back-up.</p>"
+    }
+  ]
+}

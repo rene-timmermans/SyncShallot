@@ -1,0 +1,65 @@
+{
+  "intro": "SyncShallot compares a leading collection with a backup, adds new and changed files and reveals files left behind. Choose changes deliberately; the source is protected by default.",
+  "sections": [
+    {
+      "anchor": "start",
+      "title": "Getting started: choose source and destination",
+      "body": "<p>Choose your source directory on the left and backup directory on the right. Local directories, mounted USB drives and mounted network shares work alike. SyncShallot does not mount drives. Both directories must exist and must not contain one another; the filesystem root is not allowed.</p><p>Example: your share contains only the new 4K video, while USB also retains the old 720p version. Copying updates the backup; <b>Destination-only</b> reveals the old version.</p>"
+    },
+    {
+      "anchor": "workspace",
+      "title": "Twin panels and filters",
+      "body": "<p>Matching relative paths occupy the same row. A dash means the item is absent on that side. Columns show size, modification time, comparison and planned action. Drag column boundaries to resize them; widths are saved. Both panels scroll together.</p><p>Filters are <b>All</b>, <b>Differences</b>, <b>Destination-only</b> and <b>Conflicts and skipped</b>. Search filters relative paths. Filters only change visibility: <b>already planned actions remain active outside the filter</b>. The summary counts all items and actions.</p>"
+    },
+    {
+      "anchor": "scan",
+      "title": "Quick and thorough comparison",
+      "body": "<p><b>Quick</b> compares size and modification time with a two-second tolerance. Equal size and similar times can hide different contents. Conversely, a time difference can suggest a copy even when contents match.</p><p><b>Thorough</b> reads all regular files on both sides and compares SHA-256. Equal contents need no copy, even with different dates. This takes longer, especially with media over USB or a network. Thorough is recommended for greater confidence; no method guarantees zero errors.</p><p><b>Compare</b> writes no files. Executing actions requires a separate confirmation.</p>"
+    },
+    {
+      "anchor": "direction",
+      "title": "Direction and source protection",
+      "body": "<p><b>Left → right</b> is the default: only the right side can change. A differing right version is replaced by the left version even if its date is newer. The chosen source wins.</p><p>Under <b>Options → Settings…</b>, explicitly allow changes to the left directory to enable <b>Right → left</b>, which protects the right side, or <b>Left ↔ right</b>, which can change both. Missing files are copied across. For differing files, choose the copy direction yourself. Deletions are not propagated.</p><p>Permission to change the left side is reset on restart, language changes and profile loading. Symbolic links, special files and file/directory conflicts are reported and skipped.</p>"
+    },
+    {
+      "anchor": "actions",
+      "title": "Choose and set actions",
+      "body": "<p>In a single direction, missing source files and differing files automatically receive copy actions after comparison. Destination-only files stay by default. In two-way mode, differing files without a chosen direction remain untouched.</p><ol><li>Select rows with the mouse; Ctrl and Shift extend the selection. Ctrl+A selects all visible rows within the filter.</li><li>Choose an action below the list.</li><li>Click <b>Set action</b>. Choosing the dropdown alone is not enough.</li><li>Check <b>Planned action</b>.</li></ol><p>Selecting a directory includes its descendants. Actions apply only where allowed. <b>Leave unchanged</b> clears selected actions. Copying also enables required missing parent directory actions.</p>"
+    },
+    {
+      "anchor": "extras",
+      "title": "Isolate or delete extra files",
+      "body": "<p><b>Destination-only</b> shows files absent from the source. <b>Isolate · recoverable</b> first creates a verified recovery copy, then removes the extra file from the destination. Only the parent directories needed for actual isolated files are created in recovery. Empty extra directories are removed from the destination without archiving empty copies.</p><p><b>Permanently delete · NO recovery copy</b> uses neither trash nor recovery copies. Confirmation requires exactly <b>DELETE</b>. Other selected copy and isolation actions are included in the same run.</p><p>Hidden files are included. A directory such as <code>.Trash-1000</code> can therefore be destination-only; trash directories are not excluded automatically. Exclude them in settings before comparison if desired.</p>"
+    },
+    {
+      "anchor": "execute",
+      "title": "Review and execute",
+      "body": "<p><b>Review actions…</b> lists all planned actions, including those hidden by filters. Check both root paths, direction, individual files and counts of new files, overwrites, isolation and deletion. Opening this overview executes nothing.</p><p>Tick the acknowledgment and click <b>Execute these actions</b>. Both file lists are checked again first. Overwrites always receive a verified recovery copy. New copies are staged on the destination and read back before installation.</p><p>After execution, comparison runs again using the same method. A thorough recheck can take time. Stopping or encountering an error does not undo previously completed actions.</p>"
+    },
+    {
+      "anchor": "progress",
+      "title": "Progress and stopping",
+      "body": "<p>The overall bar shows completed actions and a percentage based on action count. One large video can take longer than hundreds of small files. Directories count as actions too.</p><p>The second bar shows bytes and percentage within the current file, with a phase for comparison, copying, isolation, recovery copying or verification. It restarts at each new phase; this is normal.</p><p>While scanning, the total is not yet known, so the overall bar shows activity without an invented overall percentage. A thorough scan still shows progress within the current file. <b>Stop</b> requests cancellation at the next checkpoint; filesystem calls may take time to return. Completed actions remain in place.</p>"
+    },
+    {
+      "anchor": "recovery",
+      "title": "Recovery copies and manual restoration",
+      "body": "<p>Choose recovery storage under <b>Options → Settings…</b>, outside both selected directories. The default is <code>~/.local/share/SyncShallot/recovery</code>. Choose more spacious storage for large media. If the destination is <code>/media/usb/Media</code>, a separate <code>/media/usb/Recovery</code> directory can be suitable.</p><p>Each run has a dated, uniquely named directory. Previous versions are under <code>overwritten/left</code> or <code>overwritten/right</code>; isolated files are under <code>isolated/left</code> or <code>isolated/right</code>, preserving their relative paths. Empty isolation branches are not retained. <code>journal.jsonl</code> records progress and original paths.</p><p>Use <b>File → Open recovery folder</b> and restore files manually with your file manager, checking existing versions before overwriting. Automatic restoration is not yet available. Recovery data is not cleaned up automatically.</p>"
+    },
+    {
+      "anchor": "options",
+      "title": "Settings, exclusions and language",
+      "body": "<p><b>Options → Settings…</b> contains source unlocking, scan explanations, recovery storage and exclusion patterns. Changes apply immediately. Changing scan settings invalidates the previous comparison.</p><p>Enter one pattern per line, such as <code>*.tmp</code>, <code>.git</code> or <code>.Trash-*</code>. Patterns apply on both sides to names or relative paths and are case-sensitive. Excluded directories and their contents are skipped. Empty means include everything, including hidden files.</p><p><b>Options → Language</b> offers Dutch, English, German, French and Spanish. Changing language reopens the main window, clears the plan and restores source protection. The manual follows the selected language.</p>"
+    },
+    {
+      "anchor": "menus",
+      "title": "File menu, manual and shortcuts",
+      "body": "<p><b>File → Save profile…</b> stores paths, comparison method, recovery directory and exclusions as JSON. <b>Open profile…</b> restores these settings with left → right as the safe default. It executes nothing. Profiles neither unlock the source nor restore earlier deletion actions.</p><p><b>Export comparison…</b> saves the overview as JSON: a report, not an executable action profile. Open this offline window through <b>Help → Manual</b> or <b>F1</b>. It can stay open alongside your work. <b>About SyncShallot…</b> shows version, author, license and website.</p><p>In the manual, Ctrl+F focuses search; Enter and F3 find the next match, Shift+F3 the previous. Matches are highlighted. <b>Contents</b> returns to the table of contents; <b>Previous</b> and <b>Next</b> move between topics.</p>"
+    },
+    {
+      "anchor": "problems",
+      "title": "Messages and limits",
+      "body": "<p>A changed file, replaced directory or disconnected mount invalidates the comparison. Check the connection and compare again. A source with no regular files blocks cleanup as an extra precaution. A directory containing excluded, unselected or unsupported children cannot be removed.</p><p>New copies and recovery copies need free space. Errors stop further actions; completed actions remain and are journalled. After interruption, check the message and recovery directory first. A hard crash can leave a temporary <code>.syncshallot-*.tmp</code> file.</p><p>Equality means matching regular file contents and relative paths within the chosen filters. SyncShallot is not a disk imaging tool and does not replicate ACLs, extended attributes, ownership or hardlink relationships. Start with test directories and maintain an independent backup.</p>"
+    }
+  ]
+}

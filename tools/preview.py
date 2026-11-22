@@ -7,10 +7,28 @@ import tempfile
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from PySide6.QtCore import QSettings
 from PySide6.QtWidgets import QApplication
+from PySide6.QtGui import QColor, QPalette
 from syncshallot.app import MainWindow, install_style
 from syncshallot import engine
 
 app = QApplication([])
+if '--dark' in sys.argv:
+    palette = QPalette()
+    for role, color in ((QPalette.ColorRole.Window, '#202427'),
+                        (QPalette.ColorRole.WindowText, '#eeeeee'),
+                        (QPalette.ColorRole.Base, '#141719'),
+                        (QPalette.ColorRole.AlternateBase, '#252a2e'),
+                        (QPalette.ColorRole.Text, '#eeeeee'),
+                        (QPalette.ColorRole.Button, '#33383d'),
+                        (QPalette.ColorRole.ButtonText, '#eeeeee'),
+                        (QPalette.ColorRole.PlaceholderText, '#969ea6'),
+                        (QPalette.ColorRole.Mid, '#747b82'),
+                        (QPalette.ColorRole.Midlight, '#41484f'),
+                        (QPalette.ColorRole.Highlight, '#2aa8d3'),
+                        (QPalette.ColorRole.HighlightedText, '#ffffff')):
+        palette.setColor(role, QColor(color))
+    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.ButtonText, QColor('#90979d'))
+    app.setPalette(palette)
 install_style(app)
 with tempfile.TemporaryDirectory(prefix='syncshallot-preview-') as temporary:
     base = Path(temporary)
@@ -43,7 +61,27 @@ with tempfile.TemporaryDirectory(prefix='syncshallot-preview-') as temporary:
     window.resize(1600, 920)
     window.show()
     app.processEvents()
+    if '--progress' in sys.argv:
+        window.set_busy(True)
+        window.summary.setText(window.tr('working'))
+        window.show_progress((417, 1355, engine.FileProgress('isolate', 'Films/Archief/Verouderde versie.mkv', 768 * 1024**2, 2048 * 1024**2)))
+        app.processEvents()
+    capture = window
+    if '--settings' in sys.argv:
+        window.options_dialog.show()
+        app.processEvents()
+        capture = window.options_dialog
+    if '--about' in sys.argv:
+        from syncshallot.about import AboutDialog
+        capture = AboutDialog(window, window.tr)
+        capture.show()
+        app.processEvents()
+    if '--manual' in sys.argv:
+        window.manual()
+        capture = window.manual_window
+        app.processEvents()
     folder = Path(__file__).resolve().parents[1] / 'build'
     folder.mkdir(exist_ok=True)
-    window.grab().save(str(folder / 'syncshallot-preview.png'))
+    suffix = ''.join('-' + key for key in ('dark', 'progress', 'settings', 'about', 'manual') if '--' + key in sys.argv)
+    capture.grab().save(str(folder / f'syncshallot-preview{suffix}.png'))
     window.close()

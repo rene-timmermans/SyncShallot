@@ -49,6 +49,15 @@ class Entry:
         return self.sig[3]
 
 
+@dataclass(frozen=True)
+class FileProgress:
+    """Read-only progress information; byte counts are Python ints, including large media."""
+    phase: str
+    path: str
+    processed: int = 0
+    total: int = 0
+
+
 @dataclass
 class Row:
     path: str
@@ -149,12 +158,12 @@ def scan(root, thorough, excludes=(), cancel=None, progress=None):
                 link = ""
                 if kind == "file" and thorough:
                     if progress:
-                        progress(rel)
+                        progress(FileProgress("scan", rel, 0, before.st_size))
                     file_fd = os.open(item.name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=fd)
                     try:
                         if signature(os.fstat(file_fd)) != signature(before):
                             raise SafetyError(f"Changed during scan: {rel}")
-                        digest = hash_fd(file_fd, cancel, (lambda count: progress(f"{rel} · {count // (1024 * 1024)} MiB")) if progress else None)
+                        digest = hash_fd(file_fd, cancel, (lambda count: progress(FileProgress("scan", rel, count, before.st_size))) if progress else None)
                         if signature(os.fstat(file_fd)) != signature(before):
                             raise SafetyError(f"Changed during scan: {rel}")
                     finally:
@@ -319,6 +328,8 @@ def _copy(root, destination, rel, source, target, archive, cancel, progress=None
             created = True
             digest = hashlib.sha256()
             processed = 0
+            if progress:
+                progress(FileProgress("copy", rel, 0, source.size))
             try:
                 while True:
                     checkpoint(cancel)
@@ -327,11 +338,11 @@ def _copy(root, destination, rel, source, target, archive, cancel, progress=None
                         break
                     digest.update(chunk)
                     processed += len(chunk)
-                    if progress:
-                        progress(f"{rel} · {processed // (1024 * 1024)} MiB")
                     view = memoryview(chunk)
                     while view:
                         view = view[os.write(output_fd, view):]
+                    if progress:
+                        progress(FileProgress("copy", rel, processed, source.size))
                 os.fchmod(output_fd, stat.S_IMODE(source.sig[2]) & 0o777)
                 os.utime(output_fd, ns=(source.sig[4], source.sig[4]))
                 os.fsync(output_fd)
@@ -342,7 +353,9 @@ def _copy(root, destination, rel, source, target, archive, cancel, progress=None
             # Read back the staged copy before changing an existing destination.
             verify_fd = os.open(temp, os.O_RDONLY | os.O_NOFOLLOW, dir_fd=dst_parent)
             try:
-                if hash_fd(verify_fd, cancel) != digest.hexdigest():
+                if progress:
+                    progress(FileProgress("verify", rel, 0, source.size))
+                if hash_fd(verify_fd, cancel, (lambda count: progress(FileProgress("verify", rel, count, source.size))) if progress else None) != digest.hexdigest():
                     raise SafetyError(f"Copy verification failed: {rel}")
             finally:
                 os.close(verify_fd)
@@ -350,7 +363,7 @@ def _copy(root, destination, rel, source, target, archive, cancel, progress=None
             _expect(root, rel, source)
             _expect(destination, rel, target)
             if target:
-                archive.backup(destination, rel, target, cancel=cancel)
+                archive.backup(destination, rel, target, cancel=cancel, progress=progress)
                 _expect(destination, rel, target)
                 os.replace(temp, dst_name, src_dir_fd=dst_parent, dst_dir_fd=dst_parent)
             else:
@@ -394,16 +407,17 @@ class Archive:
         self.log.flush()
         os.fsync(self.log.fileno())
 
-    def backup(self, root, rel, entry, category="overwritten", cancel=None):
+    def backup(self, root, rel, entry, category="overwritten", cancel=None, progress=None):
         side = "left" if root == self.plan.left else "right"
         destination = self.path / category / side / rel
         destination.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
         self.record(event="backup_pending", original=str(root / rel), recovery=str(destination))
-        _copy_backup(root, rel, entry, destination, cancel)
+        _copy_backup(root, rel, entry, destination, cancel, progress,
+                     "isolate" if category == "isolated" else "backup")
         self.record(event="backup_complete", original=str(root / rel), recovery=str(destination))
 
 
-def _copy_backup(root, rel, entry, destination, cancel=None):
+def _copy_backup(root, rel, entry, destination, cancel=None, progress=None, phase="backup"):
     # A recovery copy is made and verified before the original can be changed.
     _expect(root, rel, entry)
     with parent_fd(root, rel) as (parent, name):
@@ -412,17 +426,25 @@ def _copy_backup(root, rel, entry, destination, cancel=None):
             if signature(os.fstat(fd)) != entry.sig:
                 raise SafetyError(f"Changed before backup: {rel}")
             digest = hashlib.sha256()
+            processed = 0
+            if progress:
+                progress(FileProgress(phase, rel, 0, entry.size))
             with open(destination, "xb") as out:
                 while block := os.read(fd, 1024 * 1024):
                     checkpoint(cancel)
                     digest.update(block)
                     out.write(block)
+                    processed += len(block)
+                    if progress:
+                        progress(FileProgress(phase, rel, processed, entry.size))
                 out.flush()
                 os.fsync(out.fileno())
             if signature(os.fstat(fd)) != entry.sig:
                 raise SafetyError(f"Changed during backup: {rel}")
             with open(destination, "rb") as verify:
-                if hash_fd(verify.fileno(), cancel) != digest.hexdigest():
+                if progress:
+                    progress(FileProgress("verify", rel, 0, entry.size))
+                if hash_fd(verify.fileno(), cancel, (lambda count: progress(FileProgress("verify", rel, count, entry.size))) if progress else None) != digest.hexdigest():
                     raise SafetyError(f"Recovery copy verification failed: {rel}")
             os.chmod(destination, stat.S_IMODE(entry.sig[2]) & 0o777)
             os.utime(destination, ns=(entry.sig[4], entry.sig[4]))
@@ -437,10 +459,12 @@ def execute(plan, recovery_base, cancel=None, progress=None, allow_permanent_del
         raise SafetyError("Left-side protection must be explicitly unlocked")
     if any(r.action == "delete" for r in plan.rows) and not allow_permanent_delete:
         raise SafetyError("Permanent deletion needs explicit confirmation")
-    revalidate(plan, cancel)
     selected = [r for r in plan.rows if r.action != "skip"]
     if not selected:
         raise SafetyError("No actions selected")
+    if progress:
+        progress(0, len(selected), FileProgress("check", ""))
+    revalidate(plan, cancel)
     # Create directories first, files next, removals deepest first.
     copies = [r for r in selected if r.action.startswith("copy_")]
     copies.sort(key=lambda r: (len(Path(r.path).parts), r.path))
@@ -493,15 +517,13 @@ def execute(plan, recovery_base, cancel=None, progress=None, allow_permanent_del
                     if current is None or (current.st_dev, current.st_ino) != entry.sig[:2] or not stat.S_ISDIR(current.st_mode):
                         raise SafetyError(f"Directory changed: {row.path}")
                     # rmdir refuses to remove unselected, excluded or new children.
-                    if row.action == "isolate":
-                        side = "right" if dst == plan.right else "left"
-                        (archive.path / "isolated" / side / row.path).mkdir(parents=True, exist_ok=True, mode=0o700)
                     with parent_fd(dst, row.path) as (fd, name):
                         os.rmdir(name, dir_fd=fd)
                 else:
                     _expect(dst, row.path, entry)
                     if row.action == "isolate":
-                        archive.backup(dst, row.path, entry, "isolated", cancel)
+                        archive.backup(dst, row.path, entry, "isolated", cancel,
+                                       (lambda detail: progress(completed, len(selected), detail)) if progress else None)
                     _expect(dst, row.path, entry)
                     with parent_fd(dst, row.path) as (fd, name):
                         os.unlink(name, dir_fd=fd)

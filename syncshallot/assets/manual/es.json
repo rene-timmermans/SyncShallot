@@ -1,0 +1,65 @@
+{
+  "intro": "SyncShallot compara una colección principal con su copia de seguridad, añade archivos nuevos o modificados y muestra los que han quedado sobrantes. El origen está protegido por defecto.",
+  "sections": [
+    {
+      "anchor": "start",
+      "title": "Empezar: elegir origen y destino",
+      "body": "<p>Elija el origen a la izquierda y la copia de seguridad a la derecha. Carpetas locales, unidades USB montadas y recursos de red montados funcionan igual. SyncShallot no monta unidades. Ambas carpetas deben existir y no pueden contenerse entre sí; la raíz del sistema de archivos no está permitida.</p><p>Ejemplo: un vídeo 4K sustituye la versión 720p en la colección principal. La copia añade el nuevo vídeo; <b>Solo en destino</b> muestra la versión antigua que aún ocupa espacio.</p>"
+    },
+    {
+      "anchor": "workspace",
+      "title": "Dos paneles y filtros",
+      "body": "<p>Las rutas relativas correspondientes comparten fila. Un guion indica ausencia en ese lado. Las columnas muestran tamaño, fecha, comparación y acción prevista. Arrastre sus bordes para ajustar los anchos; se guardan para el siguiente inicio. Los paneles se desplazan juntos.</p><p>Filtros: <b>Todo</b>, <b>Diferencias</b>, <b>Solo en destino</b> y <b>Conflictos y omitidos</b>. La búsqueda filtra rutas relativas. Los filtros solo cambian la vista: <b>las acciones ya previstas siguen activas aunque estén ocultas</b>. El resumen cuenta todos los elementos y acciones.</p>"
+    },
+    {
+      "anchor": "scan",
+      "title": "Comparación rápida y exhaustiva",
+      "body": "<p><b>Rápida</b> compara tamaño y fecha con dos segundos de tolerancia. Un tamaño igual y fechas parecidas pueden ocultar contenidos distintos. A la inversa, una fecha diferente puede proponer una copia aunque el contenido sea igual.</p><p><b>Exhaustiva</b> lee todos los archivos normales de ambos lados y compara SHA-256. Si el contenido coincide, no propone copiar aunque cambie la fecha. Tarda más, especialmente con medios por USB o red. Se recomienda para mayor certeza, sin garantía absoluta.</p><p><b>Comparar</b> no escribe archivos. Ejecutar las acciones exige otra confirmación.</p>"
+    },
+    {
+      "anchor": "direction",
+      "title": "Dirección y protección del origen",
+      "body": "<p>Por defecto, <b>Izquierda → derecha</b> solo puede modificar la derecha. Una versión distinta a la derecha se sustituye por la izquierda, incluso si la derecha tiene una fecha más reciente. Manda el origen elegido.</p><p>En <b>Opciones → Configuración…</b>, permita expresamente cambios a la izquierda para habilitar <b>Derecha → izquierda</b>, que protege la derecha, o <b>Izquierda ↔ derecha</b>, que puede modificar ambas. Se añaden archivos ausentes. En archivos diferentes debe elegir la dirección. No se propagan eliminaciones.</p><p>El permiso para modificar la izquierda se reinicia al arrancar, cambiar idioma o abrir un perfil. Enlaces simbólicos, archivos especiales y conflictos archivo/carpeta se muestran y omiten.</p>"
+    },
+    {
+      "anchor": "actions",
+      "title": "Elegir y establecer acciones",
+      "body": "<p>En una dirección, los archivos del origen ausentes y los distintos reciben automáticamente acciones de copia. Los adicionales se conservan por defecto. En modo bidireccional, los distintos sin dirección elegida quedan intactos.</p><ol><li>Seleccione filas con el ratón; Ctrl y Mayús amplían la selección. Ctrl+A selecciona todas las filas visibles del filtro.</li><li>Elija una acción bajo la lista.</li><li>Pulse <b>Establecer acción</b>; elegir el desplegable no basta.</li><li>Revise <b>Acción prevista</b>.</li></ol><p>Seleccionar una carpeta incluye sus descendientes. Solo se aplican acciones permitidas. <b>Dejar sin cambios</b> quita las acciones seleccionadas. Copiar también activa las carpetas superiores ausentes necesarias.</p>"
+    },
+    {
+      "anchor": "extras",
+      "title": "Aislar o eliminar archivos adicionales",
+      "body": "<p><b>Solo en destino</b> muestra lo que no existe en el origen. <b>Aislar · recuperable</b> crea primero una copia verificada y después retira el archivo del destino. En recuperación solo se crean las carpetas superiores necesarias para archivos reales. Las carpetas adicionales vacías se retiran del destino sin archivar copias vacías.</p><p><b>Eliminar permanentemente · SIN copia</b> no usa papelera ni guarda una copia. La confirmación exige escribir exactamente <b>DELETE</b>. Las demás acciones de copia o aislamiento seleccionadas se ejecutan en la misma operación.</p><p>Se incluyen archivos ocultos. <code>.Trash-1000</code> también puede ser adicional: no se excluyen papeleras automáticamente. Si lo desea, exclúyalas en configuración antes de comparar.</p>"
+    },
+    {
+      "anchor": "execute",
+      "title": "Revisar y ejecutar",
+      "body": "<p><b>Revisar acciones…</b> muestra todas las previstas, incluso las ocultas por filtros. Compruebe ambas rutas raíz, dirección, archivos y cantidades de nuevos, sobrescritos, aislados y eliminados. Abrir esta vista no ejecuta nada.</p><p>Marque la confirmación y pulse <b>Ejecutar estas acciones</b>. Primero se vuelven a comprobar ambas listas. Antes de sobrescribir siempre se crea una copia de recuperación verificada. Las nuevas copias se preparan en el destino y se vuelven a leer antes de instalarlas.</p><p>Al terminar se compara de nuevo con el mismo método. Una comprobación exhaustiva puede volver a tardar. Detener o encontrar un error no deshace acciones completadas.</p>"
+    },
+    {
+      "anchor": "progress",
+      "title": "Progreso y detener",
+      "body": "<p>La barra total muestra acciones completadas y el porcentaje según su número. Un vídeo grande puede tardar más que cientos de archivos pequeños. Las carpetas también cuentan como acciones.</p><p>La segunda barra muestra bytes y porcentaje del archivo actual. La fase indica comparación, copia, aislamiento, copia de recuperación o verificación. Al cambiar de fase vuelve a empezar; es normal.</p><p>Durante el análisis el total aún es desconocido, así que la barra muestra actividad sin un porcentaje global inventado. El modo exhaustivo sí muestra progreso dentro del archivo actual. <b>Detener</b> pide cancelar en el próximo punto de control; una llamada al sistema de archivos puede tardar en volver. Las acciones terminadas se mantienen.</p>"
+    },
+    {
+      "anchor": "recovery",
+      "title": "Recuperación y restauración manual",
+      "body": "<p>Elija recuperación en <b>Opciones → Configuración…</b>, fuera de ambas carpetas seleccionadas. Por defecto: <code>~/.local/share/SyncShallot/recovery</code>. Para medios grandes, elija espacio suficiente. Si el destino es <code>/media/usb/Media</code>, puede servir una carpeta separada <code>/media/usb/Recovery</code>.</p><p>Cada ejecución tiene una carpeta fechada y única. Las versiones anteriores están en <code>overwritten/left</code> o <code>overwritten/right</code>; los aislados en <code>isolated/left</code> o <code>isolated/right</code>, conservando rutas relativas. No se guardan ramas vacías. <code>journal.jsonl</code> registra el progreso y las rutas originales.</p><p>Use <b>Archivo → Abrir recuperación</b> y restaure manualmente con su gestor de archivos, comprobando la versión existente antes de sobrescribir. No hay restauración ni limpieza automática de recuperación.</p>"
+    },
+    {
+      "anchor": "options",
+      "title": "Configuración, exclusiones e idioma",
+      "body": "<p><b>Opciones → Configuración…</b> contiene desbloqueo del origen, explicación de los métodos, recuperación y exclusiones. Los cambios se aplican inmediatamente. Cambiar ajustes de análisis invalida la comparación anterior.</p><p>Un patrón por línea, como <code>*.tmp</code>, <code>.git</code> o <code>.Trash-*</code>. Se aplican a ambos lados por nombre o ruta relativa y distinguen mayúsculas. Una carpeta excluida se omite con su contenido. Vacío incluye todo, también lo oculto.</p><p><b>Opciones → Idioma</b> ofrece neerlandés, inglés, alemán, francés y español. Cambiar idioma reabre la ventana principal, borra el plan y reactiva la protección. El manual sigue el idioma elegido.</p>"
+    },
+    {
+      "anchor": "menus",
+      "title": "Menú Archivo, manual y atajos",
+      "body": "<p><b>Archivo → Guardar perfil…</b> almacena rutas, método, recuperación y exclusiones en JSON. <b>Abrir perfil…</b> los carga con izquierda → derecha como valor seguro, sin ejecutar acciones. Los perfiles no desbloquean el origen ni restauran antiguas acciones de eliminación.</p><p><b>Exportar comparación…</b> guarda un informe JSON, no un plan ejecutable. Abra este manual sin conexión con <b>Ayuda → Manual</b> o <b>F1</b>. Puede quedar abierto junto al trabajo. <b>Acerca de SyncShallot…</b> muestra versión, autor, licencia y web.</p><p>Ctrl+F enfoca la búsqueda. Intro y F3 buscan la siguiente coincidencia; Mayús+F3, la anterior. Se resaltan los resultados. <b>Contenido</b> vuelve al índice; <b>Anterior</b> y <b>Siguiente</b> cambian de tema.</p>"
+    },
+    {
+      "anchor": "problems",
+      "title": "Mensajes y límites",
+      "body": "<p>Un archivo modificado, una carpeta sustituida o una unidad desconectada invalidan la comparación. Compruebe la conexión y compare de nuevo. Un origen sin archivos normales bloquea la limpieza como precaución adicional. No se puede retirar una carpeta con elementos excluidos, no seleccionados o no compatibles.</p><p>Las copias nuevas y de recuperación necesitan espacio libre. Un error detiene nuevas acciones; las completadas se mantienen y registran. Tras una interrupción, consulte primero el mensaje y recuperación. Un cierre brusco puede dejar <code>.syncshallot-*.tmp</code>.</p><p>Igualdad significa mismos contenidos normales y rutas relativas dentro de los filtros. SyncShallot no crea imágenes de disco ni replica ACL, atributos extendidos, propietarios o relaciones de enlaces físicos. Empiece con carpetas de prueba y mantenga una copia independiente.</p>"
+    }
+  ]
+}
