@@ -353,6 +353,10 @@ class MainWindow(QMainWindow):
         actions.addWidget(self.filter)
         outer.addWidget(self.action_bar)
         self.summary = QLabel(self.tr("empty"))
+        summary_font = self.summary.font()
+        summary_font.setPointSizeF(summary_font.pointSizeF() + 2)
+        summary_font.setBold(True)
+        self.summary.setFont(summary_font)
         self.summary.setWordWrap(True)
         outer.addWidget(self.summary)
 
