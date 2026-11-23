@@ -1,5 +1,9 @@
 # Wijzigingen
 
+## 1.1.1 — 23 november 2026
+
+- De samenvatting boven de resultatenlijst is twee punten groter en vetgedrukt, zodat aantallen en geplande acties beter opvallen.
+
 ## 1.1.0 — 22 november 2026
 
 - Aparte functie voor het vinden en opruimen van identieke bestanden binnen één map met submappen, met een beschermd bewaard exemplaar per groep.
